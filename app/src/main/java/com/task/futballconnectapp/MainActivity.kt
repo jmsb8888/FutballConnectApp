@@ -12,36 +12,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.task.futballconnectapp.ui.theme.FutballConnectAppTheme
+import com.task.futballconnectapp.ui.theme.LoginScreen
+import com.task.futballconnectapp.ui.theme.MyApplicationTheme
+import com.task.futballconnectapp.ui.theme.UserRegistrationScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            FutballConnectAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            // Aquí se aplica el tema
+            MyApplicationTheme {
+                // Aquí se define la interfaz de usuario
+                UserRegistrationScreen()
             }
         }
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    FutballConnectAppTheme {
-        Greeting("Android")
-    }
-}
