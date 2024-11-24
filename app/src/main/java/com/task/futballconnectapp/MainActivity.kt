@@ -20,6 +20,10 @@ import com.task.futballconnectapp.ui.FootballPostsScreen
 import com.task.futballconnectapp.ui.MyApp
 import com.task.futballconnectapp.ui.Post
 import com.task.futballconnectapp.ui.TeamInfo
+import com.task.futballconnectapp.ui.MyApplicationTheme
+import com.task.futballconnectapp.ui.UserRegistrationScreen
+
+
 
 val matchResults = listOf(
     com.task.futballconnectapp.ui.MatchResult(
@@ -55,3 +59,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
