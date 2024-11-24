@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.task.futballconnectapp"
-        minSdk = 34
+        minSdk = 30
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -86,4 +86,6 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    implementation ("io.coil-kt:coil-compose:2.4.0")
 }
