@@ -1,5 +1,4 @@
-package com.task.futballconnectapp.ui.theme
-
+package com.task.futballconnectapp.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,14 +14,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import com.task.futballconnectapp.R
 
-@Composable
-fun MyApplicationTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(),
-        typography = Typography,
-        content = content
-    )
-}
+
 
 @Composable
 fun UserRegistrationScreen() {
