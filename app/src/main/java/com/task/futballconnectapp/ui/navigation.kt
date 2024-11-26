@@ -32,7 +32,12 @@ fun MyApp() {
                                 title = "Resumen del partido ${matchResult.homeTeam.shortName} vs ${matchResult.awayTeam.shortName}",
                                 description = "Un emocionante enfrentamiento entre ${matchResult.homeTeam.shortName} y ${matchResult.awayTeam.shortName}.",
                                 matchResult = matchResult,
-                                isLiked = index % 2 == 0
+                                isLiked = index % 2 == 0,
+                                comments = listOf(
+                                    Comment(userName = "Fan $index", text = "¡Qué partido tan emocionante!"),
+                                    Comment(userName = "Analista $index", text = "La estrategia del equipo local fue impresionante."),
+                                    Comment(userName = "Aficionado $index", text = "El gol del minuto 90 fue increíble.")
+                                )
                             )
                         }
                     }

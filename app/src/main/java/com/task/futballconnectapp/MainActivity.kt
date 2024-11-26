@@ -493,11 +493,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyApplicationTheme {
-                CompetitionScreen(
-                    competitions = competitions,
-                    onTeamSelected = {
-                    }
-                )
+                MyApp()
             }
         }
     }

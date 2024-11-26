@@ -1,7 +1,9 @@
 package com.task.futballconnectapp.ui
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
@@ -53,7 +56,9 @@ fun FootballPostsScreen(posts: List<Post>) {
         LazyColumn(
             contentPadding = paddingValues,
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxSize() // Asegura que LazyColumn ocupe el tamaño correcto.
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(posts) { post ->
                 PostCard(post)
@@ -65,11 +70,13 @@ fun FootballPostsScreen(posts: List<Post>) {
 @Composable
 fun PostCard(post: Post) {
     val isLikedState = remember { mutableStateOf(post.isLiked) }
-    Box(
-        modifier = Modifier
-            .clickable { /*  */ }
-    ) {
+    val showComments = remember { mutableStateOf(false) }
+    val comments = remember { mutableStateListOf<Comment>() }
+    comments += post.comments
 
+    Box(
+        modifier = Modifier.clickable { /*  */ }
+    ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -101,9 +108,14 @@ fun PostCard(post: Post) {
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xF0000000).copy(alpha = 0.1f)
                     )
-                ){
+                ) {
                     Column(modifier = Modifier.padding(8.dp)) {
-                        Text(text = post.title, style = MaterialTheme.typography.titleMedium, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = post.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             fontSize = 18.sp,
@@ -112,7 +124,6 @@ fun PostCard(post: Post) {
                             textAlign = TextAlign.Justify
                         )
                     }
-                    MatchResultCard(matchResult = post.matchResult)
                 }
 
                 Row(
@@ -126,29 +137,88 @@ fun PostCard(post: Post) {
                         contentDescription = "Me gusta",
                         isActive = isLikedState.value,
                         activeColor = Color(0xFF4CAF50),
-                        onClick = {
-                            isLikedState.value = !isLikedState.value
-                        }
+                        onClick = { isLikedState.value = !isLikedState.value }
                     )
                     InteractionIcon(
                         imageVector = Icons.Default.MailOutline,
                         contentDescription = "Comentar",
                         isActive = false,
                         activeColor = Color.Gray,
-                        onClick = { /*  */ }
+                        onClick = { showComments.value = true }
                     )
                     InteractionIcon(
                         imageVector = Icons.Default.Share,
                         contentDescription = "Compartir",
                         isActive = false,
                         activeColor = Color.Gray,
-                        onClick = { /* */ }
+                        onClick = { /*  */ }
                     )
+                }
+                if (showComments.value) {
+                    Log.d("Comentarios", "Mostrando ${post.comments} comentarios")
+                    CommentsSection(comments = comments) { newComment ->
+                        comments.add(newComment)
+                    }
                 }
             }
         }
     }
 }
+
+@Composable
+fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
+    val commentText = remember { mutableStateOf("") }
+    Log.d("----------Comentarios", "Mostrando ${comments.size} comentarios")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Text("Comentarios", style = MaterialTheme.typography.titleMedium)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp) // Limita la altura de la lista
+        ) {
+            items(comments) { comment ->
+                Text(
+                    text = "${comment.userName}: ${comment.text}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                value = commentText.value,
+                onValueChange = { commentText.value = it },
+                placeholder = { Text("Agregar un comentario...") },
+                modifier = Modifier.weight(1f),
+                colors = inputFieldColors()
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = {
+                if (commentText.value.isNotBlank()) {
+                    onAddComment(Comment("Usuario", commentText.value))
+                    commentText.value = ""
+                }
+            },
+                colors = ButtonDefaults.buttonColors(
+                    contentColor = Color.White,
+                    containerColor =Color(0xFF4CAF50).copy(0.2f)// Texto blanco
+                ),
+                modifier = Modifier
+                    .border(2.dp, Color(0xFF4CAF50), RoundedCornerShape(20.dp)),
+            ) {
+                Text("Enviar")
+            }
+        }
+    }
+}
+
+
 
 
 @Composable
@@ -241,6 +311,9 @@ data class Post(
     val title: String,
     val description: String,
     val matchResult: MatchResult,
-    val isLiked: Boolean
+    val isLiked: Boolean,
+    val comments: List<Comment> = listOf()
+
 )
 
+data class Comment(val userName: String, val text: String)

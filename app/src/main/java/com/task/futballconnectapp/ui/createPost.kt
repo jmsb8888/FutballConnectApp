@@ -172,14 +172,7 @@ fun showToast(message: String) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
-@Composable
-fun inputFieldColors(): TextFieldColors {
-    return OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = Color(0xFF4CAF50),
-        unfocusedBorderColor = Color(0xFF4CAF50).copy(alpha = 0.5f),
-        focusedLabelColor = Color(0xFF4CAF50)
-    )
-}
+
 
 @Preview(showBackground = true)
 @Composable
