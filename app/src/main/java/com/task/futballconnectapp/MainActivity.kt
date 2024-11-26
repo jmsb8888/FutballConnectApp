@@ -519,11 +519,7 @@ class MainActivity : ComponentActivity() {
                 }
                 FootballPostsScreen(posts = posts)
             MyApplicationTheme {
-                CompetitionScreen(
-                    competitions = competitions,
-                    onTeamSelected = {
-                    }
-                )
+                MyApp()
             }
         }
     }
