@@ -504,22 +504,6 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme{
                 MyApp()
             }
-
-               /* val posts = remember {
-                    matchResults.mapIndexed { index, matchResult ->
-                        Post(
-                            userName = "Usuario $index",
-                            userProfileImageUrl = "https://crests.football-data.org/PL.png",
-                            mainImageUrl = "https://crests.football-data.org/PL.png",
-                            title = "Resumen del partido",
-                            description = "Un emocionante enfrentamiento entre",
-                            matchResult = null,
-                            person = matchResult,
-                            isLiked = index % 2 == 0
-                        )
-                    }
-                }
-                FootballPostsScreen(posts = posts)*/
         }
     }
 }

@@ -50,7 +50,7 @@ fun FootballPostsScreen(navController: NavController, posts: List<Post>, screen:
                         navController.navigate("createPostPlayer")
                     }
                 },
-                containerColor = Color(0xFF4CAF50),
+                containerColor = Color.Transparent,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -89,7 +89,8 @@ fun PostCard(post: Post) {
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                //containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                containerColor = Color.Transparent
             )
         ) {
             Column {
@@ -133,11 +134,15 @@ fun PostCard(post: Post) {
                     }
 
                     if (post.matchResult != null) {
+                        Log.e("----MatchResult", "Mostrando match result")
                         MatchResultCard(matchResult = post.matchResult)
                     } else if (post.person != null) {
+                        Log.e("----MatchResult", "Mostrando persona: ${post.person}")
                         SelectedPersonCard(person = post.person)
-
+                    } else {
+                        Log.e("----MatchResult", "No hay match result ni persona")
                     }
+
                 }
 
                 Row(
@@ -182,7 +187,6 @@ fun PostCard(post: Post) {
 @Composable
 fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
     val commentText = remember { mutableStateOf("") }
-    Log.d("----------Comentarios", "Mostrando ${comments.size} comentarios")
 
     Column(
         modifier = Modifier
@@ -319,7 +323,11 @@ fun InteractionIcon(
 
 @Composable
 fun SelectedPersonCard(person: PostPerson?) {
+    Log.e("----MatchResultr", "${person}")
+
     if (person == null) {
+        Log.e("----MatchResultr222", "${person}")
+
         Text(
             text = "No se ha seleccionado ningún jugador o entrenador.",
             modifier = Modifier
@@ -330,6 +338,8 @@ fun SelectedPersonCard(person: PostPerson?) {
             color = Color.Gray
         )
     } else {
+        Log.e("----MatchResultr444", "${person}")
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -341,6 +351,7 @@ fun SelectedPersonCard(person: PostPerson?) {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
+                Log.e("----MatchResultr5555", "${person}")
                 if (person.position == null) {
                     Text(
                         text = "Entrenador: ${person.name}",
@@ -350,16 +361,16 @@ fun SelectedPersonCard(person: PostPerson?) {
                     )
                     Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
                     Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
-                    Text(
-                        text = "Jugador: ${person.name}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(text = "Posición: ${person.position}", color = Color.Gray)
-                    Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
-                    Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
                 }
+                Text(
+                    text = "Jugador: ${person.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(text = "Posición: ${person.position}", color = Color.Gray)
+                Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
+                Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
             }
         }
     }
