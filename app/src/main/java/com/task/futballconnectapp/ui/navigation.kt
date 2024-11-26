@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.task.futballconnectapp.matchResults
+import com.task.futballconnectapp.matchResultstwo
 
 @Composable
 fun MyApp() {
@@ -24,7 +25,7 @@ fun MyApp() {
             ) {
                 composable("home") {
                     val posts = remember {
-                        matchResults.mapIndexed { index, matchResult ->
+                        matchResultstwo.mapIndexed { index, matchResult ->
                             Post(
                                 userName = "Usuario $index",
                                 userProfileImageUrl = "https://crests.football-data.org/PL.png",

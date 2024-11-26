@@ -22,6 +22,7 @@ import com.task.futballconnectapp.ui.AppHeader
 import com.task.futballconnectapp.ui.FootballPostsScreen
 import com.task.futballconnectapp.ui.MyApp
 import com.task.futballconnectapp.ui.Post
+import com.task.futballconnectapp.ui.PostPerson
 import com.task.futballconnectapp.ui.TeamInfo
 import com.task.futballconnectapp.ui.MyApplicationTheme
 import com.task.futballconnectapp.ui.Player
@@ -462,7 +463,7 @@ val competitions = listOf(
 )
 
 
-val matchResults = listOf(
+val matchResultstwo = listOf(
     com.task.futballconnectapp.ui.MatchResult(
         TeamInfo(1, "Team A", "urlA"),
         TeamInfo(2, "Team B", "urlB"),
@@ -488,10 +489,35 @@ val matchResults = listOf(
         2
     )
 )
+val matchResults = listOf(
+    PostPerson(id = 1101, name = "Carlos Tévez", position = "Forward", dateOfBirth = "1984-02-05", nationality = "Argentine"),
+    PostPerson(id = 1102, name = "Darío Benedetto", position = "Forward", dateOfBirth = "1990-05-17", nationality = "Argentine"),
+    PostPerson(id = 1103, name = "Javier Pinola", position = "Defender", dateOfBirth = "1983-01-18", nationality = "Argentine"),
+    PostPerson(id = 1104, name = "Matías Suárez", position = "Forward", dateOfBirth = "1988-05-08", nationality = "Argentine"),
+    PostPerson(id = 1003, name = "Dudu", position = "Forward", dateOfBirth = "1992-01-07", nationality = "Brazilian"),
+    PostPerson(id = 1004, name = "Gustavo Scarpa", dateOfBirth = "1994-03-05", nationality = "Brazilian")
+)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+                //MyApp()
+
+                val posts = remember {
+                    matchResults.mapIndexed { index, matchResult ->
+                        Post(
+                            userName = "Usuario $index",
+                            userProfileImageUrl = "https://crests.football-data.org/PL.png",
+                            mainImageUrl = "https://crests.football-data.org/PL.png",
+                            title = "Resumen del partido",
+                            description = "Un emocionante enfrentamiento entre",
+                            matchResult = null,
+                            person = matchResult,
+                            isLiked = index % 2 == 0
+                        )
+                    }
+                }
+                FootballPostsScreen(posts = posts)
             MyApplicationTheme {
                 MyApp()
             }
