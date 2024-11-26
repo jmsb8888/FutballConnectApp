@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
 
 
 data class Competition(
@@ -75,7 +76,8 @@ data class Player(
 @Composable
 fun CompetitionScreen(
     competitions: List<Competition>,
-    onTeamSelected: (Team) -> Unit
+    onTeamSelected: (Team) -> Unit,
+    navController: NavController
 ) {
     var selectedCompetition by remember { mutableStateOf<Competition?>(null) }
     var selectedTeam by remember { mutableStateOf<Team?>(null) }
@@ -86,7 +88,11 @@ fun CompetitionScreen(
     val context = LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             PostInputFields(
                 title = title,
                 description = description,
@@ -152,15 +158,17 @@ fun CompetitionScreen(
                     title = title,
                     description = description,
                     selectedPlayer = selectedPlayer,
-                    selectedCoach = selectedCoach
+                    selectedCoach = selectedCoach,
+                    navController = navController
                 )
+
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
             containerColor = Color(0xFF4CAF50)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Publicar")
+            Text("Publicar")
         }
     }
 }
@@ -177,17 +185,21 @@ fun PostInputFields(
             value = title,
             onValueChange = onTitleChange,
             label = { Text("Título") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
             colors = inputFieldColors(),
         )
         OutlinedTextField(
             value = description,
             onValueChange = onDescriptionChange,
             label = { Text("Descripción") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             colors = inputFieldColors(),
 
-        )
+            )
     }
 }
 
@@ -197,7 +209,11 @@ fun TeamsSection(
     selectedTeam: Team?,
     onTeamClick: (Team) -> Unit
 ) {
-    Card(modifier = Modifier.padding(top = 16.dp).fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .padding(top = 16.dp)
+            .fillMaxWidth()
+    ) {
         Text(
             text = "Equipos",
             style = MaterialTheme.typography.titleLarge,
@@ -238,7 +254,9 @@ fun TeamDetails(
             .fillMaxWidth()
             .padding(bottom = 8.dp)
             .background(
-                if (selectedCoach == team.coach) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(alpha = 0.3f)
+                if (selectedCoach == team.coach) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
+                    alpha = 0.3f
+                )
             )
             .clickable {
                 onCoachClick()
@@ -271,7 +289,9 @@ fun TeamDetails(
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
                     .background(
-                        if (selectedPlayer == player) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(alpha = 0.3f)
+                        if (selectedPlayer == player) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
+                            alpha = 0.3f
+                        )
                     )
                     .clickable {
                         onPlayerClick(player)
@@ -305,21 +325,26 @@ fun TeamDetails(
 }
 
 
-
 fun handlePostCreation(
     context: Context,
     title: String,
     description: String,
     selectedPlayer: Player?,
-    selectedCoach: Coach?
+    selectedCoach: Coach?,
+    navController: NavController
 ) {
     when {
         title.isEmpty() || description.isEmpty() ->
-            Toast.makeText(context, "Por favor, complete todos los campos", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Por favor, complete todos los campos", Toast.LENGTH_SHORT)
+                .show()
+
         selectedPlayer == null && selectedCoach == null ->
             Toast.makeText(context, "Seleccione un jugador o entrenador", Toast.LENGTH_SHORT).show()
-        else ->
+
+        else -> {
             Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
+            navController.navigate("results")
+        }
     }
 }
 

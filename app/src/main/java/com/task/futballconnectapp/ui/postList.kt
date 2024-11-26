@@ -34,16 +34,23 @@ import androidx.compose.ui.text.font.FontWeight
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.task.futballconnectapp.R
 
 
 @Composable
-fun FootballPostsScreen(posts: List<Post>) {
+fun FootballPostsScreen(navController: NavController, posts: List<Post>, screen: String) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Acción de agregar publicación */ },
-                containerColor = Color(0xFF4CAF50),
+                onClick = {
+                    if (screen == "createPost") {
+                        navController.navigate("createPost")
+                    } else if (screen == "createPostPlayer") {
+                        navController.navigate("createPostPlayer")
+                    }
+                },
+                containerColor = Color.Transparent,
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -57,7 +64,7 @@ fun FootballPostsScreen(posts: List<Post>) {
             contentPadding = paddingValues,
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
-                .fillMaxSize() // Asegura que LazyColumn ocupe el tamaño correcto.
+                .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(posts) { post ->
@@ -82,7 +89,8 @@ fun PostCard(post: Post) {
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                //containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                containerColor = Color.Transparent
             )
         ) {
             Column {
@@ -125,12 +133,16 @@ fun PostCard(post: Post) {
                         )
                     }
 
-                    if(post.matchResult != null){
+                    if (post.matchResult != null) {
+                        Log.e("----MatchResult", "Mostrando match result")
                         MatchResultCard(matchResult = post.matchResult)
-                    }else if (post.person != null){
+                    } else if (post.person != null) {
+                        Log.e("----MatchResult", "Mostrando persona: ${post.person}")
                         SelectedPersonCard(person = post.person)
-
+                    } else {
+                        Log.e("----MatchResult", "No hay match result ni persona")
                     }
+
                 }
 
                 Row(
@@ -175,7 +187,6 @@ fun PostCard(post: Post) {
 @Composable
 fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
     val commentText = remember { mutableStateOf("") }
-    Log.d("----------Comentarios", "Mostrando ${comments.size} comentarios")
 
     Column(
         modifier = Modifier
@@ -186,7 +197,7 @@ fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp) // Limita la altura de la lista
+                .height(200.dp)
         ) {
             items(comments) { comment ->
                 Text(
@@ -206,15 +217,16 @@ fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
                 colors = inputFieldColors()
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = {
-                if (commentText.value.isNotBlank()) {
-                    onAddComment(Comment("Usuario", commentText.value))
-                    commentText.value = ""
-                }
-            },
+            Button(
+                onClick = {
+                    if (commentText.value.isNotBlank()) {
+                        onAddComment(Comment("Usuario", commentText.value))
+                        commentText.value = ""
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(
                     contentColor = Color.White,
-                    containerColor =Color(0xFF4CAF50).copy(0.2f)// Texto blanco
+                    containerColor = Color(0xFF4CAF50).copy(0.2f)
                 ),
                 modifier = Modifier
                     .border(2.dp, Color(0xFF4CAF50), RoundedCornerShape(20.dp)),
@@ -224,8 +236,6 @@ fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
         }
     }
 }
-
-
 
 
 @Composable
@@ -310,9 +320,14 @@ fun InteractionIcon(
         tint = if (isActive) activeColor else Color.Gray
     )
 }
+
 @Composable
 fun SelectedPersonCard(person: PostPerson?) {
+    Log.e("----MatchResultr", "${person}")
+
     if (person == null) {
+        Log.e("----MatchResultr222", "${person}")
+
         Text(
             text = "No se ha seleccionado ningún jugador o entrenador.",
             modifier = Modifier
@@ -323,6 +338,8 @@ fun SelectedPersonCard(person: PostPerson?) {
             color = Color.Gray
         )
     } else {
+        Log.e("----MatchResultr444", "${person}")
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -334,7 +351,8 @@ fun SelectedPersonCard(person: PostPerson?) {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                if (person.position == null) { // Si no tiene posición, es un entrenador
+                Log.e("----MatchResultr5555", "${person}")
+                if (person.position == null) {
                     Text(
                         text = "Entrenador: ${person.name}",
                         style = MaterialTheme.typography.titleMedium,
@@ -343,17 +361,16 @@ fun SelectedPersonCard(person: PostPerson?) {
                     )
                     Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
                     Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
-                } else { // Si tiene posición, es un jugador
-                    Text(
-                        text = "Jugador: ${person.name}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(text = "Posición: ${person.position}", color = Color.Gray)
-                    Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
-                    Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
                 }
+                Text(
+                    text = "Jugador: ${person.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(text = "Posición: ${person.position}", color = Color.Gray)
+                Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
+                Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
             }
         }
     }
@@ -365,17 +382,15 @@ data class Post(
     val mainImageUrl: String,
     val title: String,
     val description: String,
-    val matchResult: MatchResult,
+    val matchResult: MatchResult? = null,
+    val person: PostPerson? = null,
     val isLiked: Boolean,
     val comments: List<Comment> = listOf()
 
 )
 
 data class Comment(val userName: String, val text: String)
-    val person: PostPerson? = null, // Campo opcional con valor predeterminado null
-    val matchResult: MatchResult? = null, // Campo opcional con valor predeterminado null
-    val isLiked: Boolean
-)
+
 
 data class PostPerson(
     val id: Int,

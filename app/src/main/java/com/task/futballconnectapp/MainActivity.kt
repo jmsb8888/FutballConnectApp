@@ -29,7 +29,7 @@ import com.task.futballconnectapp.ui.Player
 import com.task.futballconnectapp.ui.Team
 import com.task.futballconnectapp.ui.UserRegistrationScreen
 
-val competitions = listOf(
+val competitionsTest = listOf(
     Competition(
         id = 1,
         name = "Premier League",
@@ -501,24 +501,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-                //MyApp()
-
-                val posts = remember {
-                    matchResults.mapIndexed { index, matchResult ->
-                        Post(
-                            userName = "Usuario $index",
-                            userProfileImageUrl = "https://crests.football-data.org/PL.png",
-                            mainImageUrl = "https://crests.football-data.org/PL.png",
-                            title = "Resumen del partido",
-                            description = "Un emocionante enfrentamiento entre",
-                            matchResult = null,
-                            person = matchResult,
-                            isLiked = index % 2 == 0
-                        )
-                    }
-                }
-                FootballPostsScreen(posts = posts)
-            MyApplicationTheme {
+            MyApplicationTheme{
                 MyApp()
             }
         }

@@ -14,10 +14,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppHeader(onLogoutClick: () -> Unit = {}) {
+fun AppHeader(onLogoutClick: () -> Unit = {}, navController: NavController) {
+    val currentBackStackEntry = navController.currentBackStackEntryAsState().value
+    val currentRoute = currentBackStackEntry?.destination?.route
+    val isOnLoginOrRegister = currentRoute == "login" || currentRoute == "register"
     Surface(
         shadowElevation = 4.dp,
         color = Color(0xFF4CAF50).copy(alpha = 0.2f)
@@ -39,18 +44,23 @@ fun AppHeader(onLogoutClick: () -> Unit = {}) {
                 }
             },
             actions = {
-                TextButton(
-                    onClick = onLogoutClick,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(
-                        text = "Cerrar sesión",
-                        color = Color(0xFF4CAF50),
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                if (!isOnLoginOrRegister) {
+                    TextButton(
+                        onClick = {
+                            navController.navigate("login")
+                            onLogoutClick()
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            text = "Cerrar sesión",
+                            color = Color(0xFF4CAF50),
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
-                    )
+                    }
                 }
             },
             colors = TopAppBarDefaults.smallTopAppBarColors(
@@ -60,8 +70,4 @@ fun AppHeader(onLogoutClick: () -> Unit = {}) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewAppHeader() {
-    AppHeader(onLogoutClick = { /* Acción de cierre de sesión */ })
-}
+
