@@ -20,10 +20,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
+import androidx.navigation.Navigation
 
+import com.task.futballconnectapp.ui.inputFieldColors
 
 data class TeamInfo(
     val id: Int,
@@ -39,21 +41,20 @@ data class MatchResult(
 )
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreatePostScreen() {
+fun CreatePostScreen(navController: NavController) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     val matchResults = remember {
         listOf(
             MatchResult(TeamInfo(1, "Team A", "urlA"), TeamInfo(2, "Team B", "urlB"), 2, 1),
             MatchResult(TeamInfo(3, "Team C", "urlC"), TeamInfo(4, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(5, "Team C", "urlC"), TeamInfo(6, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(7, "Team C", "urlC"), TeamInfo(8, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(9, "Team C", "urlC"), TeamInfo(10, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(11, "Team C", "urlC"), TeamInfo(12, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(13, "Team C", "urlC"), TeamInfo(14, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(15, "Team C", "urlC"), TeamInfo(16, "Team D", "urlD"), 0, 3),
+            MatchResult(TeamInfo(5, "Team E", "urlF"), TeamInfo(6, "Team F", "urlD"), 0, 3),
+            MatchResult(TeamInfo(7, "Team J", "urlG"), TeamInfo(8, "Team H", "urlD"), 0, 3),
+            MatchResult(TeamInfo(9, "Team L", "urlC"), TeamInfo(10, "Team M", "urlD"), 0, 3),
+            MatchResult(TeamInfo(11, "Team N", "urlC"), TeamInfo(12, "Team O", "urlD"), 0, 3),
+            MatchResult(TeamInfo(13, "Team P", "urlC"), TeamInfo(14, "Team Q", "urlD"), 0, 3),
+            MatchResult(TeamInfo(15, "Team R", "urlC"), TeamInfo(16, "Team S", "urlD"), 0, 3),
             MatchResult(TeamInfo(17, "Team C", "urlC"), TeamInfo(18, "Team D", "urlD"), 0, 3),
             MatchResult(TeamInfo(19, "Team C", "urlC"), TeamInfo(20, "Team D", "urlD"), 0, 3),
             MatchResult(TeamInfo(21, "Team C", "urlC"), TeamInfo(22, "Team D", "urlD"), 0, 3),
@@ -64,13 +65,21 @@ fun CreatePostScreen() {
         )
     }
     val context = LocalContext.current
+    var selectedMatch by remember { mutableStateOf<MatchResult?>(null) }
+
     fun handlePostCreation() {
-        if (title.isNotEmpty() && description.isNotEmpty()) {
+        if (title.isNotEmpty() && description.isNotEmpty() && selectedMatch != null) {
             Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
+            navController.navigate("home")
         } else {
-            Toast.makeText(context, "Por favor, complete todos los campos", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Por favor, complete todos los campos y seleccione un partido",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -104,7 +113,13 @@ fun CreatePostScreen() {
                 maxLines = 3,
                 colors = inputFieldColors()
             )
-            MatchResultList(matchResults = matchResults)
+
+            MatchResultList(
+                matchResults = matchResults,
+                selectedMatch = selectedMatch,
+                onMatchSelected = { match ->
+                    selectedMatch = match
+                })
         }
         FloatingActionButton(
             onClick = { handlePostCreation() },
@@ -113,21 +128,23 @@ fun CreatePostScreen() {
                 .padding(16.dp),
             containerColor = Color(0xFF4CAF50)
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Publicar")
+            Text("Publicar")
         }
     }
 }
 
 @Composable
-fun MatchResultList(matchResults: List<MatchResult>) {
-    var selectedMatch by remember { mutableStateOf<MatchResult?>(null) }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        matchResults.forEach { matchResult ->
+fun MatchResultList(
+    matchResults: List<MatchResult>,
+    selectedMatch: MatchResult?,
+    onMatchSelected: (MatchResult) -> Unit
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(matchResults) { matchResult ->
             MatchResultCard(
                 matchResult = matchResult,
                 isSelected = selectedMatch == matchResult,
-                onClick = { selectedMatch = matchResult }
+                onClick = { onMatchSelected(matchResult) }
             )
         }
     }
@@ -139,7 +156,8 @@ fun MatchResultCard(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+    val backgroundColor =
+        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
     val borderColor = if (isSelected) Color(0xFF4CAF50) else Color.Transparent
     val textColor = if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
     Card(
@@ -156,26 +174,16 @@ fun MatchResultCard(
         ) {
             Text(
                 text = "${matchResult.homeTeam.shortName} vs ${matchResult.awayTeam.shortName}",
-                style = MaterialTheme.typography.bodyMedium.copy(color = textColor)            )
+                style = MaterialTheme.typography.bodyMedium.copy(color = textColor)
+            )
             Text(
                 text = "Resultado: ${matchResult.fullTimeScoreHome} - ${matchResult.fullTimeScoreAway}",
-                style = MaterialTheme.typography.bodyMedium.copy(color = textColor)            )
+                style = MaterialTheme.typography.bodyMedium.copy(color = textColor)
+            )
         }
     }
 }
 
 
 
-@Composable
-fun showToast(message: String) {
-    val context = LocalContext.current
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-}
 
-
-
-@Preview(showBackground = true)
-@Composable
-fun CreatePostScreenPreview() {
-    CreatePostScreen()
-}

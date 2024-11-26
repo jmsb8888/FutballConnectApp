@@ -1,4 +1,6 @@
 package com.task.futballconnectapp.ui
+
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -8,26 +10,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.navigation.NavController
 import com.task.futballconnectapp.R
 
 
-
 @Composable
-fun UserRegistrationScreen() {
+fun UserRegistrationScreen(navController: NavController) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    val context = LocalContext.current
     fun handleRegistration() {
         if (password == confirmPassword) {
-            println("Usuario registrado: $firstName $lastName, Email: $email")
+            Toast.makeText(context, "Usuario registrado: $firstName $lastName", Toast.LENGTH_SHORT)
+                .show()
+            navController.navigate("home")
         } else {
-            println("Las contraseñas no coinciden.")
+            Toast.makeText(context, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
         }
     }
 

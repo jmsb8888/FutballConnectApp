@@ -14,10 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppHeader(onLogoutClick: () -> Unit = {}) {
+fun AppHeader(onLogoutClick: () -> Unit = {}, navController: NavController) {
+
     Surface(
         shadowElevation = 4.dp,
         color = Color(0xFF4CAF50).copy(alpha = 0.2f)
@@ -40,7 +42,10 @@ fun AppHeader(onLogoutClick: () -> Unit = {}) {
             },
             actions = {
                 TextButton(
-                    onClick = onLogoutClick,
+                    onClick = {
+                        navController.navigate("login")
+                        onLogoutClick()
+                    },
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     Text(
@@ -60,8 +65,4 @@ fun AppHeader(onLogoutClick: () -> Unit = {}) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewAppHeader() {
-    AppHeader(onLogoutClick = { /* Acción de cierre de sesión */ })
-}
+
