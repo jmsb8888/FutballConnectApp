@@ -112,7 +112,12 @@ fun PostCard(post: Post) {
                             textAlign = TextAlign.Justify
                         )
                     }
-                    MatchResultCard(matchResult = post.matchResult)
+                    if(post.matchResult != null){
+                        MatchResultCard(matchResult = post.matchResult)
+                    }else if (post.person != null){
+                        SelectedPersonCard(person = post.person)
+
+                    }
                 }
 
                 Row(
@@ -233,6 +238,54 @@ fun InteractionIcon(
         tint = if (isActive) activeColor else Color.Gray
     )
 }
+@Composable
+fun SelectedPersonCard(person: PostPerson?) {
+    if (person == null) {
+        Text(
+            text = "No se ha seleccionado ningún jugador o entrenador.",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.Gray
+        )
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                if (person.position == null) { // Si no tiene posición, es un entrenador
+                    Text(
+                        text = "Entrenador: ${person.name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
+                    Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
+                } else { // Si tiene posición, es un jugador
+                    Text(
+                        text = "Jugador: ${person.name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(text = "Posición: ${person.position}", color = Color.Gray)
+                    Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
+                    Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
+                }
+            }
+        }
+    }
+}
 
 data class Post(
     val userName: String,
@@ -240,7 +293,15 @@ data class Post(
     val mainImageUrl: String,
     val title: String,
     val description: String,
-    val matchResult: MatchResult,
+    val person: PostPerson? = null, // Campo opcional con valor predeterminado null
+    val matchResult: MatchResult? = null, // Campo opcional con valor predeterminado null
     val isLiked: Boolean
 )
 
+data class PostPerson(
+    val id: Int,
+    val name: String,
+    val position: String? = null,
+    val dateOfBirth: String,
+    val nationality: String
+)
