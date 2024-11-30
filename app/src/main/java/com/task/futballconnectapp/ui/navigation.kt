@@ -5,17 +5,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.task.futballconnectapp.matchResultstwo
-import com.task.futballconnectapp.competitionsTest
+import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 import com.task.futballconnectapp.matchResults
+import com.task.futballconnectapp.matchResultstwo
+import com.task.futballconnectapp.ui.*
 
 @Composable
 fun MyApp() {
     val navController = rememberNavController()
-
+    val apiViewModel: ApiViewModel = viewModel()
     Scaffold(
         topBar = { AppHeader(onLogoutClick = { /*  */ }, navController) },
         bottomBar = { BottomMenu(navController) },
@@ -27,7 +29,7 @@ fun MyApp() {
             ) {
                 NavHost(
                     navController = navController,
-                    startDestination = "home",
+                    startDestination = "login",
                     modifier = Modifier.fillMaxSize()
                 ) {
                     composable("home") {
@@ -86,14 +88,14 @@ fun MyApp() {
                         )
                     }
                     composable("createPost") {
-                        CreatePostScreen(navController = navController)
+                        CreatePostScreen(navController = navController, apiViewModel)
                     }
                     composable("createPostPlayer") {
                         CompetitionScreen(
-                            competitionsTest,
                             onTeamSelected = {
                             },
-                            navController = navController
+                            navController = navController,
+                            apiViewModel
                         )
                     }
                     composable("login") {
@@ -103,7 +105,7 @@ fun MyApp() {
                     }
                     composable("register") {
                         UserRegistrationScreen(
-                            navController = navController
+                            navController = navController, apiViewModel
                         )
                     }
                 }
@@ -111,6 +113,8 @@ fun MyApp() {
         }
     )
 }
+
+
 
 
 

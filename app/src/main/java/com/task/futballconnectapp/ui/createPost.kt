@@ -1,37 +1,36 @@
 package com.task.futballconnectapp.ui
 
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
+import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
-import androidx.navigation.Navigation
+import coil.compose.rememberAsyncImagePainter
+import com.task.futballconnectapp.data.api.models.CompetitionD
+import com.task.futballconnectapp.data.api.models.ResultsD
+import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.api.models.TeamInfo
+import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 
-import com.task.futballconnectapp.ui.inputFieldColors
-
-data class TeamInfo(
-    val id: Int,
-    val shortName: String,
-    val crest: String
-)
 
 data class MatchResult(
     val homeTeam: TeamInfo,
@@ -41,32 +40,16 @@ data class MatchResult(
 )
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreatePostScreen(navController: NavController) {
+fun CreatePostScreen(navController: NavController,  apiViewModel: ApiViewModel) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    val matchResults = remember {
-        listOf(
-            MatchResult(TeamInfo(1, "Team A", "urlA"), TeamInfo(2, "Team B", "urlB"), 2, 1),
-            MatchResult(TeamInfo(3, "Team C", "urlC"), TeamInfo(4, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(5, "Team E", "urlF"), TeamInfo(6, "Team F", "urlD"), 0, 3),
-            MatchResult(TeamInfo(7, "Team J", "urlG"), TeamInfo(8, "Team H", "urlD"), 0, 3),
-            MatchResult(TeamInfo(9, "Team L", "urlC"), TeamInfo(10, "Team M", "urlD"), 0, 3),
-            MatchResult(TeamInfo(11, "Team N", "urlC"), TeamInfo(12, "Team O", "urlD"), 0, 3),
-            MatchResult(TeamInfo(13, "Team P", "urlC"), TeamInfo(14, "Team Q", "urlD"), 0, 3),
-            MatchResult(TeamInfo(15, "Team R", "urlC"), TeamInfo(16, "Team S", "urlD"), 0, 3),
-            MatchResult(TeamInfo(17, "Team C", "urlC"), TeamInfo(18, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(19, "Team C", "urlC"), TeamInfo(20, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(21, "Team C", "urlC"), TeamInfo(22, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(23, "Team C", "urlC"), TeamInfo(24, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(25, "Team C", "urlC"), TeamInfo(26, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(27, "Team C", "urlC"), TeamInfo(28, "Team D", "urlD"), 0, 3),
-            MatchResult(TeamInfo(29, "Team C", "urlC"), TeamInfo(30, "Team D", "urlD"), 0, 3)
-        )
-    }
+    val competitionsState = apiViewModel.competitions.collectAsState().value
+    val matchResults = apiViewModel.results.collectAsState().value // Observa los resultados desde el ViewModel
     val context = LocalContext.current
-    var selectedMatch by remember { mutableStateOf<MatchResult?>(null) }
-
+    var selectedMatch by remember { mutableStateOf<ResultsD?>(null) }
+    var selectedCompetition by remember { mutableStateOf<CompetitionD?>(null) }
     fun handlePostCreation() {
         if (title.isNotEmpty() && description.isNotEmpty() && selectedMatch != null) {
             Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
@@ -113,13 +96,30 @@ fun CreatePostScreen(navController: NavController) {
                 maxLines = 3,
                 colors = inputFieldColors()
             )
-
-            MatchResultList(
-                matchResults = matchResults,
-                selectedMatch = selectedMatch,
-                onMatchSelected = { match ->
-                    selectedMatch = match
-                })
+            if (competitionsState.isLoading) {
+                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+            } else if (competitionsState.competitions != null) {
+                // Pasamos las competiciones obtenidas del ViewModel
+                CompetitionList(
+                    competitions = competitionsState.competitions,
+                    selectedCompetition = selectedCompetition,
+                    onCompetitionClick = {
+                            competition ->
+                        selectedCompetition = competition
+                        apiViewModel.fetchAndExtractResults(competition.id)
+                    }
+                )
+            }
+            if (matchResults.isLoading && selectedMatch != null) {
+                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+            } else if (matchResults.results != null) {
+                MatchResultList(
+                    matchResults = matchResults.results,
+                    selectedMatch = selectedMatch,
+                    onMatchSelected = { match ->
+                        selectedMatch = match
+                    })
+            }
         }
         FloatingActionButton(
             onClick = { handlePostCreation() },
@@ -134,10 +134,129 @@ fun CreatePostScreen(navController: NavController) {
 }
 
 @Composable
+fun CompetitionItemRow(
+    competition: CompetitionD,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val customSurfaceColor = Color.Gray
+
+    Column(
+        modifier = Modifier
+            .padding(4.dp)
+            .clickable { onClick() }
+            .width(100.dp)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) Color.Green else Color.Transparent,
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(competition.emblem),
+            contentDescription = null,
+            modifier = Modifier
+                .size(75.dp)
+                .clip(CircleShape)
+                .background(customSurfaceColor)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = competition.name,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = if (isSelected) Color.Green else Color.White
+        )
+    }
+}
+@Composable
+fun TeamItemRow(
+    team: Team,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val customSurfaceColor = Color.Gray
+
+    Column(
+        modifier = Modifier
+            .padding(4.dp)
+            .clickable { onClick() }
+            .width(100.dp)
+            .border(
+                width = 1.dp,
+                color = if (isSelected) Color.Green else Color.Transparent,
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(team.crest),
+            contentDescription = null,
+            modifier = Modifier
+                .size(75.dp)
+                .clip(CircleShape)
+                .background(customSurfaceColor)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = team.name,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = if (isSelected) Color.Green else Color.White
+        )
+    }
+}
+@Composable
+fun CompetitionList(
+    competitions: List<CompetitionD>,
+    selectedCompetition: CompetitionD?,
+    onCompetitionClick: (CompetitionD) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(competitions) { competition ->
+            CompetitionItemRow(
+                competition = competition,
+                isSelected = competition == selectedCompetition,
+                onClick = { onCompetitionClick(competition) }
+            )
+        }
+    }
+}
+
+@Composable
+fun teamsList(
+    teams: List<Team>,
+    selectedTeam: Team?,
+    onTeamClick: (Team) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(teams) { team ->
+            TeamItemRow(
+                team = team,
+                isSelected = team == selectedTeam,
+                onClick = { onTeamClick(team) }
+            )
+        }
+    }
+}
+@Composable
 fun MatchResultList(
-    matchResults: List<MatchResult>,
-    selectedMatch: MatchResult?,
-    onMatchSelected: (MatchResult) -> Unit
+    matchResults: List<ResultsD>,
+    selectedMatch: ResultsD?,
+    onMatchSelected: (ResultsD) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(matchResults) { matchResult ->
@@ -152,7 +271,7 @@ fun MatchResultList(
 
 @Composable
 fun MatchResultCard(
-    matchResult: MatchResult,
+    matchResult: ResultsD,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {

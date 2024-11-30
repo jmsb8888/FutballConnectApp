@@ -58,6 +58,8 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
 
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.kotlinx.serialization.json)
