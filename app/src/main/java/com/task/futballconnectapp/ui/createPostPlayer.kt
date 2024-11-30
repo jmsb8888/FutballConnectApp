@@ -14,14 +14,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -37,6 +40,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import com.task.futballconnectapp.data.api.models.Coach
+import com.task.futballconnectapp.data.api.models.CompetitionD
+import com.task.futballconnectapp.data.api.models.Player
+import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 
 
 data class Competition(
@@ -46,46 +54,24 @@ data class Competition(
     val teams: List<Team>
 )
 
-data class Team(
-    val id: Int,
-    val name: String,
-    val shortName: String,
-    val crest: String,
-    val venue: String,
-    val clubColors: String,
-    val coach: Coach,
-    val squad: List<Player>,
-    //val competition: Competition
-)
 
-data class Coach(
-    val id: Int,
-    val name: String,
-    val dateOfBirth: String,
-    val nationality: String,
-)
 
-data class Player(
-    val id: Int,
-    val name: String,
-    val position: String,
-    val dateOfBirth: String,
-    val nationality: String
-)
 
 @Composable
 fun CompetitionScreen(
-    competitions: List<Competition>,
     onTeamSelected: (Team) -> Unit,
-    navController: NavController
+    navController: NavController,
+    apiViewModel: ApiViewModel
 ) {
-    var selectedCompetition by remember { mutableStateOf<Competition?>(null) }
+    var selectedCompetition by remember { mutableStateOf<CompetitionD?>(null) }
     var selectedTeam by remember { mutableStateOf<Team?>(null) }
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     var selectedCoach by remember { mutableStateOf<Coach?>(null) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     val context = LocalContext.current
+    val competitionsState = apiViewModel.competitions.collectAsState().value
+    val teamsState = apiViewModel.teams.collectAsState().value
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -99,29 +85,34 @@ fun CompetitionScreen(
                 onTitleChange = { title = it },
                 onDescriptionChange = { description = it }
             )
-
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(competitions) { competition ->
-                    CompetitionItem(
-                        competition = competition,
-                        isSelected = selectedCompetition == competition,
-                        onClick = {
-                            if (selectedCompetition == competition) {
-                                selectedCompetition = null
-                            } else {
-                                selectedCompetition = competition
-                                selectedTeam = null
-                                selectedPlayer = null
-                                selectedCoach = null
+            if (competitionsState.isLoading) {
+                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+            } else if (competitionsState.competitions != null) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(competitionsState.competitions) { competition ->
+                        CompetitionItem(
+                            competition = competition,
+                            isSelected = selectedCompetition == competition,
+                            onClick = {
+                                apiViewModel.fetchAndExtractTeams(competition.id)
+                                if (selectedCompetition == competition) {
+                                    selectedCompetition = null
+                                } else {
+                                    selectedCompetition = competition
+                                    selectedTeam = null
+                                    selectedPlayer = null
+                                    selectedCoach = null
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
-
-            selectedCompetition?.let { competition ->
+            if (teamsState.isLoading && selectedCompetition != null) {
+                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+            } else if (teamsState.teams != null && selectedCompetition != null) {
                 TeamsSection(
-                    teams = competition.teams,
+                    teams = teamsState.teams,
                     selectedTeam = selectedTeam,
                     onTeamClick = {
                         if (selectedTeam == it) {
@@ -133,21 +124,23 @@ fun CompetitionScreen(
                         }
                     }
                 )
-            }
-            selectedTeam?.let { team ->
-                TeamDetails(
-                    team = team,
-                    selectedPlayer = selectedPlayer,
-                    selectedCoach = selectedCoach,
-                    onPlayerClick = { player ->
-                        selectedPlayer = if (selectedPlayer == player) null else player
-                        selectedCoach = null
-                    },
-                    onCoachClick = {
-                        selectedCoach = if (selectedCoach == team.coach) null else team.coach
-                        selectedPlayer = null
-                    }
-                )
+
+                selectedTeam?.let { team ->
+                    TeamDetails(
+                        team = team,
+                        selectedPlayer = selectedPlayer,
+                        selectedCoach = selectedCoach,
+                        onPlayerClick = { player ->
+                            selectedPlayer = if (selectedPlayer == player) null else player
+                            selectedCoach = null
+                        },
+                        onCoachClick = {
+                            selectedCoach =
+                                if (selectedCoach == team.coach) null else team.coach
+                            selectedPlayer = null
+                        }
+                    )
+                }
             }
         }
 
@@ -173,6 +166,7 @@ fun CompetitionScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostInputFields(
     title: String,
@@ -246,82 +240,99 @@ fun TeamDetails(
     onPlayerClick: (Player) -> Unit,
     onCoachClick: () -> Unit
 ) {
-    Spacer(modifier = Modifier.height(16.dp))
+    // Lista que contiene tanto el entrenador como los jugadores
+    val members = listOf(
+        team.coach,
+        *team.squad.toTypedArray()
+    )
 
-    Text("Entrenador:", style = MaterialTheme.typography.titleLarge, color = Color.White)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-            .background(
-                if (selectedCoach == team.coach) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
-                    alpha = 0.3f
-                )
-            )
-            .clickable {
-                onCoachClick()
-            }
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Nombre: ${team.coach.name}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (selectedCoach == team.coach) Color.Green else Color.White
-            )
-            Text(
-                text = "Fecha de nacimiento: ${team.coach.dateOfBirth}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (selectedCoach == team.coach) Color.Green else Color.White
-            )
-            Text(
-                text = "Nacionalidad: ${team.coach.nationality}",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (selectedCoach == team.coach) Color.Green else Color.White
-            )
-        }
-    }
-
-    Text("Jugadores:", style = MaterialTheme.typography.titleLarge, color = Color.White)
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
-        items(team.squad) { player ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-                    .background(
-                        if (selectedPlayer == player) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
-                            alpha = 0.3f
-                        )
-                    )
-                    .clickable {
-                        onPlayerClick(player)
+        items(members) { member ->
+            when (member) {
+                is Coach -> {
+                    // Mostrar los detalles del entrenador
+                    Text("Entrenador Y Juegadores:", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .background(
+                                if (selectedCoach == member) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
+                                    alpha = 0.3f
+                                )
+                            )
+                            .clickable {
+                                onCoachClick()
+                            }
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Nombre: ${member.name}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedCoach == member) Color.Green else Color.White
+                            )
+                            Text(
+                                text = "Fecha de nacimiento: ${member.dateOfBirth}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedCoach == member) Color.Green else Color.White
+                            )
+                            Text(
+                                text = "Nacionalidad: ${member.nationality}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedCoach == member) Color.Green else Color.White
+                            )
+                        }
                     }
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Nombre: ${player.name}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (selectedPlayer == player) Color.Green else Color.White
-                    )
-                    Text(
-                        text = "Posición: ${player.position}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (selectedPlayer == player) Color.Green else Color.White
-                    )
-                    Text(
-                        text = "Fecha de nacimiento: ${player.dateOfBirth}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (selectedPlayer == player) Color.Green else Color.White
-                    )
-                    Text(
-                        text = "Nacionalidad: ${player.nationality}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (selectedPlayer == player) Color.Green else Color.White
-                    )
+                }
+                is Player -> {
+                    // Mostrar los detalles del jugador
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .background(
+                                if (selectedPlayer == member) Color.Green.copy(alpha = 0.3f) else Color.Gray.copy(
+                                    alpha = 0.3f
+                                )
+                            )
+                            .clickable {
+                                onPlayerClick(member)
+                            }
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Nombre: ${member.name}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedPlayer == member) Color.Green else Color.White
+                            )
+                            Text(
+                                text = "Posición: ${member.position}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedPlayer == member) Color.Green else Color.White
+                            )
+                            Text(
+                                text = "Fecha de nacimiento: ${member.dateOfBirth}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedPlayer == member) Color.Green else Color.White
+                            )
+                            Text(
+                                text = "Nacionalidad: ${member.nationality}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selectedPlayer == member) Color.Green else Color.White
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+
+// Sellado que define los elementos que se pueden mostrar: Coach o Player
+sealed class Member {
+    data class Coach(val coach: Coach) : Member()
+    data class Player(val player: Player) : Member()
 }
 
 
@@ -387,7 +398,7 @@ fun TeamCircleItem(
 
 @Composable
 fun CompetitionItem(
-    competition: Competition,
+    competition: CompetitionD,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
