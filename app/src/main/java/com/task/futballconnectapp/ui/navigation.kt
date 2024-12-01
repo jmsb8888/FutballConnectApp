@@ -1,25 +1,41 @@
 package com.task.futballconnectapp.ui
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
-import com.task.futballconnectapp.matchResults
-import com.task.futballconnectapp.matchResultstwo
-import com.task.futballconnectapp.ui.*
+import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 
 @Composable
-fun MyApp() {
+fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel: DataViewModel) {
     val navController = rememberNavController()
     val apiViewModel: ApiViewModel = viewModel()
+    val postMatchesState = dataViewModel.postMatch.collectAsState().value
+    val postPlayersState = dataViewModel.postPlayers.collectAsState().value
+
+    LaunchedEffect(Unit) {
+        dataViewModel.fetchAllPostMatches(sharedPreferencesViewModel.getIdUser())
+        dataViewModel.fetchAllPostPlayer(sharedPreferencesViewModel.getIdUser())
+    }
     Scaffold(
-        topBar = { AppHeader(onLogoutClick = { /*  */ }, navController) },
+        topBar = {
+            AppHeader(
+                onLogoutClick = { /*  */ },
+                navController,
+                dataViewModel,
+                sharedPreferencesViewModel
+            )
+        },
         bottomBar = { BottomMenu(navController) },
         content = { padding ->
             Box(
@@ -33,79 +49,54 @@ fun MyApp() {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     composable("home") {
-                        val posts = remember {
-                            matchResultstwo.mapIndexed { index, matchResult ->
-                                Post(
-                                    userName = "Usuario $index",
-                                    userProfileImageUrl = "https://crests.football-data.org/PL.png",
-                                    mainImageUrl = "https://crests.football-data.org/PL.png",
-                                    title = "Resumen del partido ${matchResult.homeTeam.shortName} vs ${matchResult.awayTeam.shortName}",
-                                    description = "Un emocionante enfrentamiento entre ${matchResult.homeTeam.shortName} y ${matchResult.awayTeam.shortName}.",
-                                    matchResult = matchResult,
-                                    isLiked = index % 2 == 0,
-                                    comments = listOf(
-                                        Comment(
-                                            userName = "Fan $index",
-                                            text = "¡Qué partido tan emocionante!"
-                                        ),
-                                        Comment(
-                                            userName = "Analista $index",
-                                            text = "La estrategia del equipo local fue impresionante."
-                                        ),
-                                        Comment(
-                                            userName = "Aficionado $index",
-                                            text = "El gol del minuto 90 fue increíble."
-                                        )
-                                    )
-                                )
-                            }
-                        }
                         FootballPostsScreen(
                             navController = navController,
-                            posts = posts,
-                            "createPost"
+                            "createPost",
+                            postMatchesState.postMatches,
+                            dataViewModel,
+                            sharedPreferencesViewModel
                         )
                     }
                     composable("results") {
-                        val posts = remember {
-                            matchResults.mapIndexed { index, matchResult ->
-                                Post(
-                                    userName = "Usuario $index",
-                                    userProfileImageUrl = "https://crests.football-data.org/PL.png",
-                                    mainImageUrl = "https://crests.football-data.org/PL.png",
-                                    title = "Resumen del partido",
-                                    description = "Un emocionante enfrentamiento entre",
-                                    matchResult = null,
-                                    person = matchResult,
-                                    isLiked = index % 2 == 0
-                                )
-                            }
-                        }
                         FootballPostsScreen(
                             navController = navController,
-                            posts = posts,
-                            "createPostPlayer"
+                            "createPostPlayer",
+                            postPlayersState.postPlayers,
+                            dataViewModel,
+                            sharedPreferencesViewModel
                         )
                     }
                     composable("createPost") {
-                        CreatePostScreen(navController = navController, apiViewModel)
+                        CreatePostScreen(
+                            navController = navController,
+                            apiViewModel,
+                            dataViewModel,
+                            sharedPreferencesViewModel
+                        )
                     }
                     composable("createPostPlayer") {
                         CompetitionScreen(
                             onTeamSelected = {
                             },
                             navController = navController,
-                            apiViewModel
+                            apiViewModel,
+                            dataViewModel,
+                            sharedPreferencesViewModel
                         )
                     }
                     composable("login") {
                         LoginScreen(
-                            navController = navController
+                            navController = navController,
+                            dataViewModel,
+                            sharedPreferencesViewModel
                         )
                     }
                     composable("register") {
                         UserRegistrationScreen(
-                            navController = navController, apiViewModel
+                            navController = navController,
+                            apiViewModel,
+                            dataViewModel,
+                            sharedPreferencesViewModel
                         )
                     }
                 }
@@ -113,6 +104,7 @@ fun MyApp() {
         }
     )
 }
+
 
 
 
