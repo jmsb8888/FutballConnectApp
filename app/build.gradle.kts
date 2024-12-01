@@ -91,4 +91,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation ("io.coil-kt:coil-compose:2.4.0")
+    //bd sqlserver
+    implementation(libs.jtds)
+    implementation(libs.mssql.jdbc)
+    implementation(libs.mssql.jdbc.v1220jre8)
+
 }

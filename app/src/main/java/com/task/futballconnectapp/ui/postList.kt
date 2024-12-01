@@ -5,41 +5,70 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.task.futballconnectapp.R
+import coil.compose.rememberAsyncImagePainter
+import com.task.futballconnectapp.data.bd.models.Comment
+import com.task.futballconnectapp.data.bd.models.MatchResult
+import com.task.futballconnectapp.data.bd.models.Post
+import com.task.futballconnectapp.data.bd.models.PostPerson
+import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
+import kotlinx.coroutines.launch
 
 
 @Composable
-fun FootballPostsScreen(navController: NavController, posts: List<Post>, screen: String) {
+fun FootballPostsScreen(
+    navController: NavController,
+    screen: String,
+    posts: List<Post>,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel
+) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
@@ -68,18 +97,39 @@ fun FootballPostsScreen(navController: NavController, posts: List<Post>, screen:
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(posts) { post ->
-                PostCard(post)
+                PostCard(post, dataViewModel, sharedPreferencesViewModel)
             }
         }
     }
 }
 
 @Composable
-fun PostCard(post: Post) {
+fun PostCard(
+    post: Post,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel
+) {
     val isLikedState = remember { mutableStateOf(post.isLiked) }
     val showComments = remember { mutableStateOf(false) }
     val comments = remember { mutableStateListOf<Comment>() }
-    comments += post.comments
+    val commentUiState = dataViewModel.comments.collectAsState().value
+    val coroutineScope = rememberCoroutineScope()
+    Log.d("PostCardlllllllllllllllllllll", "idPost: ${sharedPreferencesViewModel.getIdUser()}")
+    LaunchedEffect(post.idPost, showComments.value) {
+        Log.d("PostCard1", "LaunchedEffect llamado con idPost: ${post.idPost}")
+        Log.d("PostCard2", "LaunchedEffect llamado con showComments: ${showComments.value}")
+        if (showComments.value) {
+            post.idPost?.let { dataViewModel.fetchComments(it) }
+
+        }
+        Log.d("PostCard3", "Comentarios cargados: ${commentUiState.commentList}")
+    }
+    LaunchedEffect(commentUiState) {
+        if (showComments.value && commentUiState.commentList.isNotEmpty()) {
+            comments.clear()
+            comments.addAll(commentUiState.commentList)
+        }
+    }
 
     Box(
         modifier = Modifier.clickable { /*  */ }
@@ -89,7 +139,6 @@ fun PostCard(post: Post) {
             shape = RoundedCornerShape(8.dp),
             elevation = CardDefaults.cardElevation(4.dp),
             colors = CardDefaults.cardColors(
-                //containerColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
                 containerColor = Color.Transparent
             )
         ) {
@@ -134,17 +183,13 @@ fun PostCard(post: Post) {
                     }
 
                     if (post.matchResult != null) {
-                        Log.e("----MatchResult", "Mostrando match result")
                         MatchResultCard(matchResult = post.matchResult)
                     } else if (post.person != null) {
-                        Log.e("----MatchResult", "Mostrando persona: ${post.person}")
                         SelectedPersonCard(person = post.person)
-                    } else {
-                        Log.e("----MatchResult", "No hay match result ni persona")
                     }
-
                 }
 
+                val isLiked = isLikedState.value ?: false
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     modifier = Modifier
@@ -154,9 +199,23 @@ fun PostCard(post: Post) {
                     InteractionIcon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = "Me gusta",
-                        isActive = isLikedState.value,
+                        isActive = isLiked,
                         activeColor = Color(0xFF4CAF50),
-                        onClick = { isLikedState.value = !isLikedState.value }
+                        onClick = {
+                            isLikedState.value = !(isLikedState.value ?: false)
+                            Log.d("PostCardlllllllllllllllllllll", "idPost: ${post.idPost}")
+                            coroutineScope.launch {
+                                if (isLikedState.value == true) {
+                                    dataViewModel.addLike(
+                                        post.idPost!!, sharedPreferencesViewModel.getIdUser()
+                                    )
+                                } else {
+                                    dataViewModel.removeLike(
+                                        post.idPost!!, sharedPreferencesViewModel.getIdUser()
+                                    )
+                                }
+                            }
+                        }
                     )
                     InteractionIcon(
                         imageVector = Icons.Default.MailOutline,
@@ -165,28 +224,35 @@ fun PostCard(post: Post) {
                         activeColor = Color.Gray,
                         onClick = { showComments.value = true }
                     )
-                    InteractionIcon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Compartir",
-                        isActive = false,
-                        activeColor = Color.Gray,
-                        onClick = { /*  */ }
-                    )
                 }
                 if (showComments.value) {
-                    Log.d("Comentarios", "Mostrando ${post.comments} comentarios")
-                    CommentsSection(comments = comments) { newComment ->
-                        comments.add(newComment)
-                    }
+                    Log.d("Comentarios", "Mostrando ${comments.size} comentarios")
+                    CommentsSection(
+                        comments = comments,
+                        dataViewModel = dataViewModel,
+                        sharedPreferencesViewModel = sharedPreferencesViewModel,
+                        idPost = post.idPost,
+                        onAddComment = { newComment ->
+                            comments.add(newComment)
+                        }
+                    )
                 }
             }
         }
     }
 }
 
+
 @Composable
-fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
+fun CommentsSection(
+    comments: List<Comment>,
+    onAddComment: (Comment) -> Unit,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    idPost: Int?
+) {
     val commentText = remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -220,7 +286,16 @@ fun CommentsSection(comments: List<Comment>, onAddComment: (Comment) -> Unit) {
             Button(
                 onClick = {
                     if (commentText.value.isNotBlank()) {
-                        onAddComment(Comment("Usuario", commentText.value))
+                        val newComment = idPost?.let {
+                            Comment(
+                                null,
+                                it, sharedPreferencesViewModel.getUserName(), commentText.value
+                            )
+                        }
+                        onAddComment(newComment!!)
+                        coroutineScope.launch {
+                            dataViewModel.createComment(newComment)
+                        }
                         commentText.value = ""
                     }
                 },
@@ -266,7 +341,7 @@ fun MatchResultCard(matchResult: MatchResult) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "${matchResult.homeTeam.shortName} vs ${matchResult.awayTeam.shortName}",
+            text = "${matchResult.homeTeam} vs ${matchResult.awayTeam}",
             style = MaterialTheme.typography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp,
@@ -361,41 +436,18 @@ fun SelectedPersonCard(person: PostPerson?) {
                     )
                     Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
                     Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
+                } else {
+                    Text(
+                        text = "Jugador: ${person.name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(text = "Posición: ${person.position}", color = Color.Gray)
+                    Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
+                    Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
                 }
-                Text(
-                    text = "Jugador: ${person.name}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(text = "Posición: ${person.position}", color = Color.Gray)
-                Text(text = "Nacionalidad: ${person.nationality}", color = Color.Gray)
-                Text(text = "Fecha de nacimiento: ${person.dateOfBirth}", color = Color.Gray)
             }
         }
     }
 }
-
-data class Post(
-    val userName: String,
-    val userProfileImageUrl: String,
-    val mainImageUrl: String,
-    val title: String,
-    val description: String,
-    val matchResult: MatchResult? = null,
-    val person: PostPerson? = null,
-    val isLiked: Boolean,
-    val comments: List<Comment> = listOf()
-
-)
-
-data class Comment(val userName: String, val text: String)
-
-
-data class PostPerson(
-    val id: Int,
-    val name: String,
-    val position: String? = null,
-    val dateOfBirth: String,
-    val nationality: String
-)

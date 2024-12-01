@@ -6,54 +6,100 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SearchBarDefaults.inputFieldColors
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.task.futballconnectapp.data.api.models.CompetitionD
 import com.task.futballconnectapp.data.api.models.ResultsD
 import com.task.futballconnectapp.data.api.models.Team
-import com.task.futballconnectapp.data.api.models.TeamInfo
+import com.task.futballconnectapp.data.bd.models.MatchResult
+import com.task.futballconnectapp.data.bd.models.Post
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
-
-
-data class MatchResult(
-    val homeTeam: TeamInfo,
-    val awayTeam: TeamInfo,
-    val fullTimeScoreHome: Int,
-    val fullTimeScoreAway: Int
-)
-
+import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreatePostScreen(navController: NavController,  apiViewModel: ApiViewModel) {
+fun CreatePostScreen(
+    navController: NavController,
+    apiViewModel: ApiViewModel,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel
+) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     val competitionsState = apiViewModel.competitions.collectAsState().value
-    val matchResults = apiViewModel.results.collectAsState().value // Observa los resultados desde el ViewModel
+    val matchResults = apiViewModel.results.collectAsState().value
     val context = LocalContext.current
     var selectedMatch by remember { mutableStateOf<ResultsD?>(null) }
     var selectedCompetition by remember { mutableStateOf<CompetitionD?>(null) }
-    fun handlePostCreation() {
+    val coroutineScope = rememberCoroutineScope()
+
+    suspend fun handlePostCreation() {
         if (title.isNotEmpty() && description.isNotEmpty() && selectedMatch != null) {
-            Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
-            navController.navigate("home")
+            val matchResult = selectedMatch?.let {
+                MatchResult(
+                    id = 1,
+                    homeTeam = it.homeTeam.shortName,
+                    awayTeam = it.awayTeam.shortName,
+                    fullTimeScoreHome = it.fullTimeScoreHome,
+                    fullTimeScoreAway = it.fullTimeScoreAway
+                )
+            }
+            val result = dataViewModel.createPostMatch(matchResult!!)
+            result?.let {
+                val post = Post(
+                    userName = sharedPreferencesViewModel.getUserName(),
+                    userProfileImageUrl = sharedPreferencesViewModel.getUserImage(),
+                    mainImageUrl = "image",
+                    title = title,
+                    description = description,
+                    matchResult = it,
+                    person = null,
+                    isLiked = false
+                )
+                dataViewModel.createPost(post)
+                Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
+                navController.navigate("home")
+            }
         } else {
             Toast.makeText(
                 context,
@@ -96,22 +142,22 @@ fun CreatePostScreen(navController: NavController,  apiViewModel: ApiViewModel) 
                 maxLines = 3,
                 colors = inputFieldColors()
             )
+
             if (competitionsState.isLoading) {
-                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+                CircularProgressIndicator()
             } else if (competitionsState.competitions != null) {
-                // Pasamos las competiciones obtenidas del ViewModel
                 CompetitionList(
                     competitions = competitionsState.competitions,
                     selectedCompetition = selectedCompetition,
-                    onCompetitionClick = {
-                            competition ->
+                    onCompetitionClick = { competition ->
                         selectedCompetition = competition
                         apiViewModel.fetchAndExtractResults(competition.id)
                     }
                 )
             }
+
             if (matchResults.isLoading && selectedMatch != null) {
-                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+                CircularProgressIndicator()
             } else if (matchResults.results != null) {
                 MatchResultList(
                     matchResults = matchResults.results,
@@ -121,8 +167,13 @@ fun CreatePostScreen(navController: NavController,  apiViewModel: ApiViewModel) 
                     })
             }
         }
+
         FloatingActionButton(
-            onClick = { handlePostCreation() },
+            onClick = {
+                coroutineScope.launch {
+                    handlePostCreation()
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),

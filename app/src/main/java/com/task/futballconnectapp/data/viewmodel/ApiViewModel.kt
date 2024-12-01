@@ -52,7 +52,6 @@ class ApiViewModel @Inject constructor(
                     isLoading = false,
                     competitions = competitions
                 )
-                // Aquí puedes actualizar un LiveData o manejar los datos extraídos
                 println("Competiciones extraídas: $competitions")
             } else {
                 println("Error al obtener las competiciones")
@@ -61,7 +60,7 @@ class ApiViewModel @Inject constructor(
     }
 
     private suspend fun getCompetitions(): String? {
-        return withContext(Dispatchers.IO) { // Ejecutar en un hilo de I/O
+        return withContext(Dispatchers.IO) {
             try {
                 val response = retrofitApi.getCompetitionsRaw()
                 if (response.isSuccessful) {
@@ -89,7 +88,7 @@ class ApiViewModel @Inject constructor(
                 val emblem = competitionJson.jsonObject["emblem"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 CompetitionD(id = id, name = name, emblem = emblem)
             } catch (e: Exception) {
-                null // Omitir entradas con errores
+                null
             }
         }
     }

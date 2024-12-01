@@ -6,62 +6,65 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SearchBarDefaults.inputFieldColors
 import androidx.compose.material3.Text
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.task.futballconnectapp.data.api.models.Coach
 import com.task.futballconnectapp.data.api.models.CompetitionD
 import com.task.futballconnectapp.data.api.models.Player
 import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.bd.models.Post
+import com.task.futballconnectapp.data.bd.models.PostPerson
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
-
-
-data class Competition(
-    val id: Int,
-    val name: String,
-    val emblem: String,
-    val teams: List<Team>
-)
-
-
+import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
+import kotlinx.coroutines.launch
 
 
 @Composable
 fun CompetitionScreen(
     onTeamSelected: (Team) -> Unit,
     navController: NavController,
-    apiViewModel: ApiViewModel
+    apiViewModel: ApiViewModel,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     var selectedCompetition by remember { mutableStateOf<CompetitionD?>(null) }
     var selectedTeam by remember { mutableStateOf<Team?>(null) }
@@ -72,6 +75,7 @@ fun CompetitionScreen(
     val context = LocalContext.current
     val competitionsState = apiViewModel.competitions.collectAsState().value
     val teamsState = apiViewModel.teams.collectAsState().value
+    val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -86,7 +90,7 @@ fun CompetitionScreen(
                 onDescriptionChange = { description = it }
             )
             if (competitionsState.isLoading) {
-                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+                CircularProgressIndicator()
             } else if (competitionsState.competitions != null) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(competitionsState.competitions) { competition ->
@@ -109,7 +113,7 @@ fun CompetitionScreen(
                 }
             }
             if (teamsState.isLoading && selectedCompetition != null) {
-                CircularProgressIndicator() // Indicador de carga mientras se obtienen los datos
+                CircularProgressIndicator()
             } else if (teamsState.teams != null && selectedCompetition != null) {
                 TeamsSection(
                     teams = teamsState.teams,
@@ -146,15 +150,18 @@ fun CompetitionScreen(
 
         FloatingActionButton(
             onClick = {
-                handlePostCreation(
-                    context = context,
-                    title = title,
-                    description = description,
-                    selectedPlayer = selectedPlayer,
-                    selectedCoach = selectedCoach,
-                    navController = navController
-                )
-
+                coroutineScope.launch {
+                    handlePostCreation(
+                        context = context,
+                        title = title,
+                        description = description,
+                        selectedPlayer = selectedPlayer,
+                        selectedCoach = selectedCoach,
+                        navController = navController,
+                        dataViewModel = dataViewModel,
+                        sharedPreferencesViewModel = sharedPreferencesViewModel
+                    )
+                }
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -240,17 +247,14 @@ fun TeamDetails(
     onPlayerClick: (Player) -> Unit,
     onCoachClick: () -> Unit
 ) {
-    // Lista que contiene tanto el entrenador como los jugadores
     val members = listOf(
         team.coach,
         *team.squad.toTypedArray()
     )
-
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
         items(members) { member ->
             when (member) {
                 is Coach -> {
-                    // Mostrar los detalles del entrenador
                     Text("Entrenador Y Juegadores:", style = MaterialTheme.typography.titleLarge, color = Color.White)
                     Card(
                         modifier = Modifier
@@ -285,7 +289,6 @@ fun TeamDetails(
                     }
                 }
                 is Player -> {
-                    // Mostrar los detalles del jugador
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -329,20 +332,21 @@ fun TeamDetails(
 }
 
 
-// Sellado que define los elementos que se pueden mostrar: Coach o Player
 sealed class Member {
     data class Coach(val coach: Coach) : Member()
     data class Player(val player: Player) : Member()
 }
 
 
-fun handlePostCreation(
+suspend fun handlePostCreation(
     context: Context,
     title: String,
     description: String,
     selectedPlayer: Player?,
     selectedCoach: Coach?,
-    navController: NavController
+    navController: NavController,
+    dataViewModel: DataViewModel,
+    sharedPreferencesViewModel: SharedPreferencesViewModel
 ) {
     when {
         title.isEmpty() || description.isEmpty() ->
@@ -353,7 +357,42 @@ fun handlePostCreation(
             Toast.makeText(context, "Seleccione un jugador o entrenador", Toast.LENGTH_SHORT).show()
 
         else -> {
-            Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
+            var personCreated: PostPerson? = null
+            if (selectedPlayer != null) {
+                val person = PostPerson(
+                    id = selectedPlayer.id,
+                    name = selectedPlayer.name,
+                    position = selectedPlayer.position,
+                    dateOfBirth = selectedPlayer.dateOfBirth,
+                    nationality = selectedPlayer.nationality
+                )
+                val result = dataViewModel.createPostPlayer(person)
+                personCreated = result
+            } else if (selectedCoach != null) {
+                val person = PostPerson(
+                    id = selectedCoach.id,
+                    name = selectedCoach.name,
+                    dateOfBirth = selectedCoach.dateOfBirth,
+                    nationality = selectedCoach.nationality
+                )
+                val result = dataViewModel.createPostPlayer(person)
+                personCreated = result
+            }
+            personCreated?.let { person ->
+
+                val post = Post(
+                    userName = sharedPreferencesViewModel.getUserName(),
+                    userProfileImageUrl = sharedPreferencesViewModel.getUserImage(),
+                    mainImageUrl = "image",
+                    title = title,
+                    description = description,
+                    matchResult = null,
+                    person = person,
+                    isLiked = false
+                )
+                dataViewModel.createPost(post)
+            }
+            Toast.makeText(context, "Publicación creada", Toast.LENGTH_SHORT).show()
             navController.navigate("results")
         }
     }

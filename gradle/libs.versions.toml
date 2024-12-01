@@ -21,6 +21,9 @@ mockk = "1.13.13"
 roomRuntime = "2.6.1"
 navigationCompose = "2.8.3"
 retrofit = "2.9.0"
+mssqlJdbcVersion = "12.2.0.jre8"
+mssqlJdbc = "12.2.0.jre11"
+jtds = "1.3.1"
 
 [libraries]
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayoutCompose" }
@@ -53,6 +56,9 @@ mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+jtds = { module = "net.sourceforge.jtds:jtds", version.ref = "jtds" }
+mssql-jdbc = { module = "com.microsoft.sqlserver:mssql-jdbc", version.ref = "mssqlJdbc" }
+mssql-jdbc-v1220jre8 = { module = "com.microsoft.sqlserver:mssql-jdbc", version.ref = "mssqlJdbcVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
