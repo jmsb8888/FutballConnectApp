@@ -95,5 +95,6 @@ dependencies {
     implementation(libs.jtds)
     implementation(libs.mssql.jdbc)
     implementation(libs.mssql.jdbc.v1220jre8)
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
 
 }

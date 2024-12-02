@@ -40,9 +40,11 @@ import androidx.navigation.NavController
 import com.task.futballconnectapp.R
 import com.task.futballconnectapp.data.api.models.CompetitionD
 import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.bd.local.entities.UserEntity
 import com.task.futballconnectapp.data.bd.models.User
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 
@@ -51,7 +53,8 @@ fun UserRegistrationScreen(
     navController: NavController,
     apiViewModel: ApiViewModel,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -76,8 +79,10 @@ fun UserRegistrationScreen(
                 password = password,
                 imagePerfil = imagePerfil
             )
+            var newUserBd: User? = null
             dataViewModel.createUser(newUser).let { user ->
                 if (user != null) {
+                    newUserBd = user
                     sharedPreferencesViewModel.setIdUser(user.id)
                     sharedPreferencesViewModel.setUserName(user.name)
                     sharedPreferencesViewModel.setUserImage(user.imagePerfil ?: "")
@@ -88,6 +93,16 @@ fun UserRegistrationScreen(
                     Toast.makeText(context, "Error al registrar usuario", Toast.LENGTH_SHORT).show()
                 }
             }
+
+            val userEntity = UserEntity(
+                id = 0,
+                name = "$firstName $lastName",
+                email = email,
+                password = password,
+                imagePerfil = imagePerfil,
+                idBdRemote = newUserBd.let { it?.id }
+            )
+            roomViewModel.insertUser(userEntity)
         } else {
             Toast.makeText(
                 context,
@@ -234,6 +249,7 @@ fun UserRegistrationScreen(
                             handleRegistration()
 
                         }
+
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

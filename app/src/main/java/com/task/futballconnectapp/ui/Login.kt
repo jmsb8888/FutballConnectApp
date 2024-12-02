@@ -1,6 +1,5 @@
 package com.task.futballconnectapp.ui
 
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -40,13 +39,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.task.futballconnectapp.R
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 
 @Composable
 fun LoginScreen(
     navController: NavController,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     var idUser = sharedPreferencesViewModel.getIdUser()
     if (idUser != 0) {
@@ -137,7 +138,35 @@ fun LoginScreen(
                             isError = false
                             isPasswordInvalid = false
                             isLoading = true
-                            dataViewModel.fetchUserByEmail(username)
+                            val isConnected = isInternetAvailable(context)
+                            if (isConnected) {
+                                dataViewModel.fetchUserByEmail(username)
+                            } else {
+                                roomViewModel.validateUser(
+                                    username, password
+                                ) { user ->
+                                    if (user != null) {
+                                        if (user.idBdRemote != null) {
+                                            sharedPreferencesViewModel.setIdUser(user.idBdRemote!!)
+                                        } else {
+                                            sharedPreferencesViewModel.setIdUser(user.id)
+                                        }
+                                        sharedPreferencesViewModel.setUserName(user.name)
+                                        sharedPreferencesViewModel.setUserImage(
+                                            user.imagePerfil ?: ""
+                                        )
+                                        navController.navigate("home")
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "Usuario o contraseña incorrectos",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                            .show()
+                                        isPasswordInvalid = true
+                                    }
+                                }
+                            }
                         } else {
                             isError = true
                             Toast.makeText(context, "Error al iniciar sesión", Toast.LENGTH_SHORT)
@@ -175,8 +204,6 @@ fun LoginScreen(
         if (isLoading && userState.user != null) {
             userState.user?.let { user ->
                 if (user.password == password) {
-                    Log.d("LoginScreen", "Usuario logueado: ${user.name}")
-                    Log.d("LoginScreen", "SharedPreferences: setIdUser(${user.id})")
                     sharedPreferencesViewModel.setIdUser(user.id)
                     sharedPreferencesViewModel.setUserName(user.name)
                     sharedPreferencesViewModel.setUserImage(user.imagePerfil ?: "")

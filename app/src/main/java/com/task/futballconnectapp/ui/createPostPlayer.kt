@@ -50,10 +50,12 @@ import com.task.futballconnectapp.data.api.models.Coach
 import com.task.futballconnectapp.data.api.models.CompetitionD
 import com.task.futballconnectapp.data.api.models.Player
 import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.bd.local.entities.PostPersonEntity
 import com.task.futballconnectapp.data.bd.models.Post
 import com.task.futballconnectapp.data.bd.models.PostPerson
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 
@@ -64,7 +66,8 @@ fun CompetitionScreen(
     navController: NavController,
     apiViewModel: ApiViewModel,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     var selectedCompetition by remember { mutableStateOf<CompetitionD?>(null) }
     var selectedTeam by remember { mutableStateOf<Team?>(null) }
@@ -159,7 +162,8 @@ fun CompetitionScreen(
                         selectedCoach = selectedCoach,
                         navController = navController,
                         dataViewModel = dataViewModel,
-                        sharedPreferencesViewModel = sharedPreferencesViewModel
+                        sharedPreferencesViewModel = sharedPreferencesViewModel,
+                        roomViewModel = roomViewModel
                     )
                 }
             },
@@ -346,7 +350,8 @@ suspend fun handlePostCreation(
     selectedCoach: Coach?,
     navController: NavController,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     when {
         title.isEmpty() || description.isEmpty() ->
@@ -358,6 +363,7 @@ suspend fun handlePostCreation(
 
         else -> {
             var personCreated: PostPerson? = null
+            var personCreatedLocal: Long? = null
             if (selectedPlayer != null) {
                 val person = PostPerson(
                     id = selectedPlayer.id,
@@ -368,6 +374,16 @@ suspend fun handlePostCreation(
                 )
                 val result = dataViewModel.createPostPlayer(person)
                 personCreated = result
+                val localPerson = PostPersonEntity(
+                    name = selectedPlayer.name,
+                    position = selectedPlayer.position,
+                    dateOfBirth = selectedPlayer.dateOfBirth,
+                    nationality = selectedPlayer.nationality
+                )
+
+                val data = roomViewModel.insertPostPerson(localPerson)
+                personCreatedLocal = data
+
             } else if (selectedCoach != null) {
                 val person = PostPerson(
                     id = selectedCoach.id,
@@ -377,6 +393,14 @@ suspend fun handlePostCreation(
                 )
                 val result = dataViewModel.createPostPlayer(person)
                 personCreated = result
+                val localPerson = PostPersonEntity(
+                    name = selectedCoach.name,
+                    position = null,
+                    dateOfBirth = selectedCoach.dateOfBirth,
+                    nationality = selectedCoach.nationality
+                )
+                val data = roomViewModel.insertPostPerson(localPerson)
+                personCreatedLocal = data
             }
             personCreated?.let { person ->
 
@@ -390,7 +414,19 @@ suspend fun handlePostCreation(
                     person = person,
                     isLiked = false
                 )
-                dataViewModel.createPost(post)
+                val idPost = dataViewModel.createPost(post)
+                val postLocal = com.task.futballconnectapp.data.bd.local.entities.PostEntity(
+                    userName = sharedPreferencesViewModel.getUserName(),
+                    userProfileImageUrl = sharedPreferencesViewModel.getUserImage(),
+                    mainImageUrl = "image",
+                    title = title,
+                    description = description,
+                    matchResultId = null,
+                    personId = personCreatedLocal!!.toInt(),
+                    isLiked = false,
+                    idBdRemote = idPost?.toInt()
+                )
+                roomViewModel.insertPost(postLocal)
             }
             Toast.makeText(context, "Publicación creada", Toast.LENGTH_SHORT).show()
             navController.navigate("results")
