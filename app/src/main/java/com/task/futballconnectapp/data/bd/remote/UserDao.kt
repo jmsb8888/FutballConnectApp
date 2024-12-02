@@ -1,7 +1,6 @@
 package com.task.futballconnectapp.data.bd.remote
 
 import android.database.SQLException
-import android.util.Log
 import com.task.futballconnectapp.data.api.models.TeamInfo
 import com.task.futballconnectapp.data.bd.models.Comment
 import com.task.futballconnectapp.data.bd.models.MatchResult
@@ -15,21 +14,15 @@ import javax.inject.Inject
 
 class UserDao @Inject constructor() {
     suspend fun getUsers(): List<User> {
-        Log.d("UserDao", "Attempting to connect to the database")
         return withContext(Dispatchers.IO) {
             val connection = DatabaseConfig.getConnection()
             val query = "SELECT * FROM users"
-            Log.d("UserDao", "Executing query: $query")
             val users = mutableListOf<User>()
 
             try {
                 val statement = connection.createStatement()
-                Log.d("UserDao", "Statement created: $statement")
                 val resultSet = statement.executeQuery(query)
-                Log.d("UserDao", "Query executed: $resultSet")
-
                 while (resultSet.next()) {
-                    Log.d("UserDao", "Fetching user")
                     val user = User(
                         id = resultSet.getInt("id"),
                         name = resultSet.getString("name"),
@@ -38,7 +31,6 @@ class UserDao @Inject constructor() {
                         imagePerfil = resultSet.getString("imageperfil")
                     )
                     users.add(user)
-                    Log.d("DataViewModel", "fetchUsers: $users")
                 }
             } finally {
                 connection.close()
@@ -48,22 +40,15 @@ class UserDao @Inject constructor() {
     }
 
     suspend fun getUserByEmail(email: String): User? {
-        Log.d("UserDao", "Attempting to find user by email: $email")
         return withContext(Dispatchers.IO) {
             val connection = DatabaseConfig.getConnection()
             val query = "SELECT * FROM users WHERE email = ?"
             var user: User? = null
-
             try {
                 val preparedStatement = connection.prepareStatement(query)
-                Log.d("UserDao", "PreparedStatement created: $preparedStatement")
                 preparedStatement.setString(1, email)
-                Log.d("UserDao", "Executing query: $query with email: $email")
                 val resultSet = preparedStatement.executeQuery()
-                Log.d("UserDao", "Query executed: $resultSet")
-
                 if (resultSet.next()) {
-                    Log.d("UserDao", "User found")
                     user = User(
                         id = resultSet.getInt("id"),
                         name = resultSet.getString("name"),
@@ -71,8 +56,6 @@ class UserDao @Inject constructor() {
                         password = resultSet.getString("password"),
                         imagePerfil = resultSet.getString("imageperfil")
                     )
-                } else {
-                    Log.d("UserDao", "No user found with email: $email")
                 }
             } finally {
                 connection.close()
@@ -81,7 +64,7 @@ class UserDao @Inject constructor() {
         }
     }
 
-    suspend fun createPost(post: Post): Boolean {
+    suspend fun createPost(post: Post): Long? {
         return withContext(Dispatchers.IO) {
             val connection = DatabaseConfig.getConnection()
             val query = """
@@ -91,7 +74,8 @@ class UserDao @Inject constructor() {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
             try {
-                val statement: PreparedStatement = connection.prepareStatement(query)
+                val statement: PreparedStatement =
+                    connection.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS)
                 statement.setString(1, post.userName)
                 statement.setString(2, post.userProfileImageUrl)
                 statement.setString(3, post.mainImageUrl)
@@ -100,14 +84,22 @@ class UserDao @Inject constructor() {
                 statement.setObject(6, post.matchResult?.id)
                 statement.setObject(7, post.person?.id)
                 statement.setBoolean(8, false)
-
-                val rowsInserted = statement.executeUpdate()
-                rowsInserted > 0
+                statement.executeUpdate()
+                val generatedKeys = statement.generatedKeys
+                if (generatedKeys.next()) {
+                    return@withContext generatedKeys.getLong(1)
+                } else {
+                    return@withContext null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext null
             } finally {
                 connection.close()
             }
         }
     }
+
 
     suspend fun getAllPosts(type: Int, idUser: Int): List<Post> {
         return withContext(Dispatchers.IO) {
@@ -120,19 +112,15 @@ class UserDao @Inject constructor() {
             LEFT JOIN MatchResult mr ON p.MatchResultId = mr.Id
             LEFT JOIN PostPerson pp ON p.PersonId = pp.Id
         """
-
             if (type == -1) {
                 query += " WHERE p.MatchResultId IS NULL AND p.PersonId IS NOT NULL"
             } else {
                 query += " WHERE p.MatchResultId IS NOT NULL AND p.PersonId IS NULL"
             }
-
             val posts = mutableListOf<Post>()
-
             try {
                 val statement = connection.createStatement()
                 val resultSet = statement.executeQuery(query)
-
                 while (resultSet.next()) {
                     val postId = resultSet.getInt("Id")
                     val matchResult = if (resultSet.getObject("MatchResultId") != null) {
@@ -144,7 +132,6 @@ class UserDao @Inject constructor() {
                             fullTimeScoreAway = resultSet.getInt("FullTimeScoreAway")
                         )
                     } else null
-
                     val person = if (resultSet.getObject("PersonId") != null) {
                         PostPerson(
                             id = resultSet.getInt("PersonId"),
@@ -155,7 +142,6 @@ class UserDao @Inject constructor() {
                         )
                     } else null
                     val isLiked = hasUserLikedPost(postId, idUser)
-
                     val post = Post(
                         idPost = postId,
                         userName = resultSet.getString("UserName"),
@@ -181,7 +167,6 @@ class UserDao @Inject constructor() {
             val connection = DatabaseConfig.getConnection()
             val query = "SELECT UserName, Text FROM Comment WHERE PostId = ?"
             val comments = mutableListOf<Comment>()
-
             try {
                 val statement: PreparedStatement = connection.prepareStatement(query)
                 statement.setInt(1, postId)
@@ -355,7 +340,7 @@ class UserDao @Inject constructor() {
         }
     }
 
-    suspend fun addLike(postId: Int, userId: Int): Boolean {
+    suspend fun addLike(postId: Int, userId: Int): Long? {
         return withContext(Dispatchers.IO) {
             val connection = DatabaseConfig.getConnection()
             try {
@@ -363,14 +348,22 @@ class UserDao @Inject constructor() {
                 INSERT INTO PostLikes (PostId, UserId)
                 VALUES (?, ?);
             """
-                val statement = connection.prepareStatement(insertQuery)
+                val statement = connection.prepareStatement(
+                    insertQuery,
+                    PreparedStatement.RETURN_GENERATED_KEYS
+                )
                 statement.setInt(1, postId)
                 statement.setInt(2, userId)
                 statement.executeUpdate()
-                return@withContext true
+                val generatedKeys = statement.generatedKeys
+                if (generatedKeys.next()) {
+                    return@withContext generatedKeys.getLong(1)
+                } else {
+                    return@withContext null
+                }
             } catch (e: java.sql.SQLException) {
                 if (e.message?.contains("duplicate key") == true) {
-                    return@withContext false
+                    return@withContext null
                 } else {
                     throw e
                 }
@@ -379,6 +372,7 @@ class UserDao @Inject constructor() {
             }
         }
     }
+
 
     suspend fun hasUserLikedPost(postId: Int, userId: Int): Boolean {
         return withContext(Dispatchers.IO) {
@@ -394,7 +388,6 @@ class UserDao @Inject constructor() {
                 val resultSet = statement.executeQuery()
                 return@withContext resultSet.next()
             } catch (e: Exception) {
-                Log.e("Error", "Error checking like status", e)
                 return@withContext false
             } finally {
                 connection.close()
@@ -415,13 +408,10 @@ class UserDao @Inject constructor() {
                 val rowsAffected = statement.executeUpdate()
                 return@withContext rowsAffected > 0
             } catch (e: Exception) {
-                Log.e("Error", "Error removing like", e)
                 return@withContext false
             } finally {
                 connection.close()
             }
         }
     }
-
-
 }

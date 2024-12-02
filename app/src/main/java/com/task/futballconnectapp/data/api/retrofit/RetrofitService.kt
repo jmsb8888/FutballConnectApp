@@ -1,4 +1,5 @@
 package com.task.futballconnectapp.data.api.retrofit
+
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

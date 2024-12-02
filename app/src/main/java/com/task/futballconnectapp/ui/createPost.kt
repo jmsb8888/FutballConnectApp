@@ -49,10 +49,13 @@ import coil.compose.rememberAsyncImagePainter
 import com.task.futballconnectapp.data.api.models.CompetitionD
 import com.task.futballconnectapp.data.api.models.ResultsD
 import com.task.futballconnectapp.data.api.models.Team
+import com.task.futballconnectapp.data.bd.local.entities.MatchResultEntity
+import com.task.futballconnectapp.data.bd.local.entities.PostEntity
 import com.task.futballconnectapp.data.bd.models.MatchResult
 import com.task.futballconnectapp.data.bd.models.Post
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 
@@ -62,7 +65,8 @@ fun CreatePostScreen(
     navController: NavController,
     apiViewModel: ApiViewModel,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -85,6 +89,19 @@ fun CreatePostScreen(
                 )
             }
             val result = dataViewModel.createPostMatch(matchResult!!)
+            val result2 = selectedMatch?.let {
+                MatchResultEntity(
+                    homeTeamId = it.homeTeam.shortName,
+                    awayTeamId = it.awayTeam.shortName,
+                    fullTimeScoreHome = it.fullTimeScoreHome,
+                    fullTimeScoreAway = it.fullTimeScoreAway,
+                    idBdRemote = result?.id
+                )
+            }
+            var idResult: Long = 0;
+            if (result2 != null) {
+                idResult = roomViewModel.insertMatchResult(result2)!!
+            }
             result?.let {
                 val post = Post(
                     userName = sharedPreferencesViewModel.getUserName(),
@@ -96,7 +113,19 @@ fun CreatePostScreen(
                     person = null,
                     isLiked = false
                 )
-                dataViewModel.createPost(post)
+                val idPost = dataViewModel.createPost(post)
+                val postEntity = PostEntity(
+                    userName = sharedPreferencesViewModel.getUserName(),
+                    userProfileImageUrl = sharedPreferencesViewModel.getUserImage(),
+                    mainImageUrl = "image",
+                    title = title,
+                    description = description,
+                    matchResultId = idResult.toInt(),
+                    personId = null,
+                    isLiked = false,
+                    idBdRemote = idPost?.toInt()
+                )
+                roomViewModel.insertPost(postEntity)
                 Toast.makeText(context, "Publicación creada: $title", Toast.LENGTH_SHORT).show()
                 navController.navigate("home")
             }

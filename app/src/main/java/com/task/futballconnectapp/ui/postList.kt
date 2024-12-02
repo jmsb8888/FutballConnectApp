@@ -1,6 +1,5 @@
 package com.task.futballconnectapp.ui
 
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,17 +45,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.task.futballconnectapp.data.bd.local.entities.CommentEntity
+import com.task.futballconnectapp.data.bd.local.entities.PostLikesEntity
 import com.task.futballconnectapp.data.bd.models.Comment
 import com.task.futballconnectapp.data.bd.models.MatchResult
 import com.task.futballconnectapp.data.bd.models.Post
 import com.task.futballconnectapp.data.bd.models.PostPerson
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 
@@ -67,7 +70,8 @@ fun FootballPostsScreen(
     screen: String,
     posts: List<Post>,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     Scaffold(
         floatingActionButton = {
@@ -97,7 +101,7 @@ fun FootballPostsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items(posts) { post ->
-                PostCard(post, dataViewModel, sharedPreferencesViewModel)
+                PostCard(post, dataViewModel, sharedPreferencesViewModel, roomViewModel)
             }
         }
     }
@@ -107,22 +111,25 @@ fun FootballPostsScreen(
 fun PostCard(
     post: Post,
     dataViewModel: DataViewModel,
-    sharedPreferencesViewModel: SharedPreferencesViewModel
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    roomViewModel: RoomViewModel
 ) {
     val isLikedState = remember { mutableStateOf(post.isLiked) }
     val showComments = remember { mutableStateOf(false) }
     val comments = remember { mutableStateListOf<Comment>() }
     val commentUiState = dataViewModel.comments.collectAsState().value
     val coroutineScope = rememberCoroutineScope()
-    Log.d("PostCardlllllllllllllllllllll", "idPost: ${sharedPreferencesViewModel.getIdUser()}")
+    val contex = LocalContext.current
     LaunchedEffect(post.idPost, showComments.value) {
-        Log.d("PostCard1", "LaunchedEffect llamado con idPost: ${post.idPost}")
-        Log.d("PostCard2", "LaunchedEffect llamado con showComments: ${showComments.value}")
         if (showComments.value) {
-            post.idPost?.let { dataViewModel.fetchComments(it) }
-
+            if (isInternetAvailable(contex)) {
+                post.idPost?.let { dataViewModel.fetchComments(it) }
+            } else {
+                roomViewModel.getCommentsForPost(post.idPost!!) {
+                    commentUiState.commentList = it
+                }
+            }
         }
-        Log.d("PostCard3", "Comentarios cargados: ${commentUiState.commentList}")
     }
     LaunchedEffect(commentUiState) {
         if (showComments.value && commentUiState.commentList.isNotEmpty()) {
@@ -203,15 +210,27 @@ fun PostCard(
                         activeColor = Color(0xFF4CAF50),
                         onClick = {
                             isLikedState.value = !(isLikedState.value ?: false)
-                            Log.d("PostCardlllllllllllllllllllll", "idPost: ${post.idPost}")
                             coroutineScope.launch {
                                 if (isLikedState.value == true) {
-                                    dataViewModel.addLike(
+                                    val idResult = dataViewModel.addLike(
                                         post.idPost!!, sharedPreferencesViewModel.getIdUser()
+                                    )
+                                    roomViewModel.likePost(
+                                        PostLikesEntity(
+                                            postId = post.idPost,
+                                            userId = sharedPreferencesViewModel.getIdUser(),
+                                            idBdRemote = idResult?.toInt()
+                                        )
                                     )
                                 } else {
                                     dataViewModel.removeLike(
                                         post.idPost!!, sharedPreferencesViewModel.getIdUser()
+                                    )
+                                    roomViewModel.unlikePost(
+                                        PostLikesEntity(
+                                            postId = post.idPost,
+                                            userId = sharedPreferencesViewModel.getIdUser()
+                                        )
                                     )
                                 }
                             }
@@ -226,12 +245,12 @@ fun PostCard(
                     )
                 }
                 if (showComments.value) {
-                    Log.d("Comentarios", "Mostrando ${comments.size} comentarios")
                     CommentsSection(
                         comments = comments,
                         dataViewModel = dataViewModel,
                         sharedPreferencesViewModel = sharedPreferencesViewModel,
                         idPost = post.idPost,
+                        roomViewModel = roomViewModel,
                         onAddComment = { newComment ->
                             comments.add(newComment)
                         }
@@ -249,7 +268,8 @@ fun CommentsSection(
     onAddComment: (Comment) -> Unit,
     dataViewModel: DataViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
-    idPost: Int?
+    idPost: Int?,
+    roomViewModel: RoomViewModel
 ) {
     val commentText = remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
@@ -293,9 +313,17 @@ fun CommentsSection(
                             )
                         }
                         onAddComment(newComment!!)
+                        var commentSaved: Comment? = null
                         coroutineScope.launch {
-                            dataViewModel.createComment(newComment)
+                            commentSaved = dataViewModel.createComment(newComment)
                         }
+                        val commentLocal = CommentEntity(
+                            postId = newComment.postId,
+                            userName = newComment.userName,
+                            text = newComment.text,
+                            idBdRemote = commentSaved?.id
+                        )
+                        roomViewModel.insertComment(commentLocal)
                         commentText.value = ""
                     }
                 },
@@ -398,11 +426,7 @@ fun InteractionIcon(
 
 @Composable
 fun SelectedPersonCard(person: PostPerson?) {
-    Log.e("----MatchResultr", "${person}")
-
     if (person == null) {
-        Log.e("----MatchResultr222", "${person}")
-
         Text(
             text = "No se ha seleccionado ningún jugador o entrenador.",
             modifier = Modifier
@@ -413,8 +437,6 @@ fun SelectedPersonCard(person: PostPerson?) {
             color = Color.Gray
         )
     } else {
-        Log.e("----MatchResultr444", "${person}")
-
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -426,7 +448,6 @@ fun SelectedPersonCard(person: PostPerson?) {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                Log.e("----MatchResultr5555", "${person}")
                 if (person.position == null) {
                     Text(
                         text = "Entrenador: ${person.name}",

@@ -1,6 +1,5 @@
 package com.task.futballconnectapp.data.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.task.futballconnectapp.UiState.Api.CompetitionsUiState
@@ -52,9 +51,6 @@ class ApiViewModel @Inject constructor(
                     isLoading = false,
                     competitions = competitions
                 )
-                println("Competiciones extraídas: $competitions")
-            } else {
-                println("Error al obtener las competiciones")
             }
         }
     }
@@ -66,7 +62,6 @@ class ApiViewModel @Inject constructor(
                 if (response.isSuccessful) {
                     response.body()?.string()
                 } else {
-
                     null
                 }
             } catch (e: Exception) {
@@ -80,7 +75,6 @@ class ApiViewModel @Inject constructor(
         val json = Json { ignoreUnknownKeys = true }
         val root = json.decodeFromString<JsonObject>(jsonString)
         val competitionsArray = root["competitions"]?.jsonArray ?: return emptyList()
-
         return competitionsArray.mapNotNull { competitionJson ->
             try {
                 val id = competitionJson.jsonObject["id"]?.jsonPrimitive?.int ?: return@mapNotNull null
@@ -107,7 +101,7 @@ class ApiViewModel @Inject constructor(
     }
 
     private suspend fun getResults(idCompetition: Int): String? {
-        return withContext(Dispatchers.IO) { // Ejecutar en un hilo de I/O
+        return withContext(Dispatchers.IO) {
             try {
                 val response = retrofitApi.getMatches(idCompetition)
                 if (response.isSuccessful) {
@@ -122,35 +116,27 @@ class ApiViewModel @Inject constructor(
     }
 
     private fun extractResults(jsonString: String): List<ResultsD> {
-        val json = Json { ignoreUnknownKeys = true } // Ignorar claves no conocidas
-        val root = json.decodeFromString<JsonObject>(jsonString) // Convertir el JSON en un objeto JsonObject
-        val matchesArray = root["matches"]?.jsonArray ?: return emptyList() // Obtener el array de matches
-
+        val json = Json { ignoreUnknownKeys = true }
+        val root = json.decodeFromString<JsonObject>(jsonString)
+        val matchesArray = root["matches"]?.jsonArray ?: return emptyList()
         return matchesArray.mapNotNull { matchJson ->
             try {
                 val homeTeam = matchJson.jsonObject["homeTeam"]?.jsonObject
                 val awayTeam = matchJson.jsonObject["awayTeam"]?.jsonObject
-
-                // Extraer datos de los equipos
                 val homeTeamInfo = TeamInfo(
                     id = homeTeam?.get("id")?.jsonPrimitive?.int ?: return@mapNotNull null,
                     shortName = homeTeam["shortName"]?.jsonPrimitive?.content ?: return@mapNotNull null,
                     crest = homeTeam["crest"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 )
-
                 val awayTeamInfo = TeamInfo(
                     id = awayTeam?.get("id")?.jsonPrimitive?.int ?: return@mapNotNull null,
                     shortName = awayTeam["shortName"]?.jsonPrimitive?.content ?: return@mapNotNull null,
                     crest = awayTeam["crest"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 )
-
-                // Extraer los puntajes
                 val fullTimeHome = matchJson.jsonObject["score"]?.jsonObject
                     ?.get("fullTime")?.jsonObject?.get("home")?.jsonPrimitive?.int ?: return@mapNotNull null
                 val fullTimeAway = matchJson.jsonObject["score"]?.jsonObject
                     ?.get("fullTime")?.jsonObject?.get("away")?.jsonPrimitive?.int ?: return@mapNotNull null
-
-                // Crear el objeto ResultsD
                 ResultsD(
                     homeTeam = homeTeamInfo,
                     awayTeam = awayTeamInfo,
@@ -158,7 +144,7 @@ class ApiViewModel @Inject constructor(
                     fullTimeScoreAway = fullTimeAway
                 )
             } catch (e: Exception) {
-                null // Si hay un error en el mapeo, omitimos este partido
+                null
             }
         }
     }
@@ -168,7 +154,6 @@ class ApiViewModel @Inject constructor(
             val response = getTeams(idCompetition)
             if (response != null) {
                 val teams = extractTeams(response)
-                Log.d("ApiViewModel", "fetchAndExtractTeams: $teams")
                 _teams.value = _teams.value.copy(
                     isLoading = false,
                     teams = teams
@@ -178,7 +163,7 @@ class ApiViewModel @Inject constructor(
     }
 
     private suspend fun getTeams(idCompetition: Int): String? {
-        return withContext(Dispatchers.IO) { // Ejecutar en un hilo de I/O
+        return withContext(Dispatchers.IO) {
             try {
                 val response = retrofitApi.getTeams(idCompetition)
                 if (response.isSuccessful) {
@@ -197,7 +182,6 @@ class ApiViewModel @Inject constructor(
         val json = Json { ignoreUnknownKeys = true }
         val root = json.decodeFromString<JsonObject>(jsonString)
         val teamsArray = root["teams"]?.jsonArray ?: return emptyList()
-
         return teamsArray.mapNotNull { teamJson ->
             try {
                 val id = teamJson.jsonObject["id"]?.jsonPrimitive?.int ?: return@mapNotNull null
@@ -206,8 +190,6 @@ class ApiViewModel @Inject constructor(
                 val crest = teamJson.jsonObject["crest"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 val venue = teamJson.jsonObject["venue"]?.jsonPrimitive?.content ?: return@mapNotNull null
                 val clubColors = teamJson.jsonObject["clubColors"]?.jsonPrimitive?.content ?: return@mapNotNull null
-
-                // Extraer el coach
                 val coachJson = teamJson.jsonObject["coach"]?.jsonObject
                 val coach = coachJson?.let {
                     Coach(
@@ -217,8 +199,6 @@ class ApiViewModel @Inject constructor(
                         nationality = it["nationality"]?.jsonPrimitive?.content ?: return@let null
                     )
                 } ?: return@mapNotNull null
-
-                // Extraer los jugadores
                 val squadJson = teamJson.jsonObject["squad"]?.jsonArray
                 val squad = squadJson?.mapNotNull { playerJson ->
                     val id = playerJson.jsonObject["id"]?.jsonPrimitive?.int ?: return@mapNotNull null
@@ -226,13 +206,11 @@ class ApiViewModel @Inject constructor(
                     val position = playerJson.jsonObject["position"]?.jsonPrimitive?.content ?: return@mapNotNull null
                     val dateOfBirth = playerJson.jsonObject["dateOfBirth"]?.jsonPrimitive?.content ?: return@mapNotNull null
                     val nationality = playerJson.jsonObject["nationality"]?.jsonPrimitive?.content ?: return@mapNotNull null
-
                     Player(id, name, position, dateOfBirth, nationality)
                 } ?: emptyList()
-
                 Team(id, name, shortName, crest, venue, clubColors, coach, squad)
             } catch (e: Exception) {
-                null // Omitir entradas con errores
+                null
             }
         }
     }

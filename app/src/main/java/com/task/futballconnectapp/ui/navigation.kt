@@ -1,5 +1,6 @@
 package com.task.futballconnectapp.ui
 
+import AppHeader
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -8,24 +9,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.task.futballconnectapp.data.viewmodel.ApiViewModel
 import com.task.futballconnectapp.data.viewmodel.DataViewModel
+import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 
 @Composable
-fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel: DataViewModel) {
+fun MyApp(
+    sharedPreferencesViewModel: SharedPreferencesViewModel,
+    dataViewModel: DataViewModel,
+    roomViewModel: RoomViewModel
+) {
     val navController = rememberNavController()
     val apiViewModel: ApiViewModel = viewModel()
     val postMatchesState = dataViewModel.postMatch.collectAsState().value
     val postPlayersState = dataViewModel.postPlayers.collectAsState().value
-
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
-        dataViewModel.fetchAllPostMatches(sharedPreferencesViewModel.getIdUser())
-        dataViewModel.fetchAllPostPlayer(sharedPreferencesViewModel.getIdUser())
+        if (isInternetAvailable(context)) {
+            dataViewModel.fetchAllPostMatches(sharedPreferencesViewModel.getIdUser())
+            dataViewModel.fetchAllPostPlayer(sharedPreferencesViewModel.getIdUser())
+        } else {
+            roomViewModel.getAllPostsPlayer(sharedPreferencesViewModel.getIdUser()) {
+                postPlayersState.postPlayers = it
+            }
+            roomViewModel.getAllPostsMatches(sharedPreferencesViewModel.getIdUser()) {
+                postMatchesState.postMatches = it
+            }
+        }
+
     }
     Scaffold(
         topBar = {
@@ -54,7 +71,8 @@ fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel:
                             "createPost",
                             postMatchesState.postMatches,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                     composable("results") {
@@ -63,7 +81,8 @@ fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel:
                             "createPostPlayer",
                             postPlayersState.postPlayers,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                     composable("createPost") {
@@ -71,7 +90,8 @@ fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel:
                             navController = navController,
                             apiViewModel,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                     composable("createPostPlayer") {
@@ -81,14 +101,16 @@ fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel:
                             navController = navController,
                             apiViewModel,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                     composable("login") {
                         LoginScreen(
                             navController = navController,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                     composable("register") {
@@ -96,7 +118,8 @@ fun MyApp(sharedPreferencesViewModel: SharedPreferencesViewModel, dataViewModel:
                             navController = navController,
                             apiViewModel,
                             dataViewModel,
-                            sharedPreferencesViewModel
+                            sharedPreferencesViewModel,
+                            roomViewModel
                         )
                     }
                 }
