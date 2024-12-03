@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
         if (isInternetAvailable(this)) {
             lifecycleScope.launch {
                 try {
+                    deleteDatabase("nombre_de_tu_base_de_datos")
                     dataSynchronizer.synchronizeData()
                 } catch (e: Exception) {
                     Log.e("MainActivity", "Error sincronizando datos: ${e.message}")

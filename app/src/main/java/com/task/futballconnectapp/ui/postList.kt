@@ -1,5 +1,6 @@
 package com.task.futballconnectapp.ui
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,9 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -63,49 +62,117 @@ import com.task.futballconnectapp.data.viewmodel.RoomViewModel
 import com.task.futballconnectapp.data.viewmodel.SharedPreferencesViewModel
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun FootballPostsScreen(
     navController: NavController,
     screen: String,
-    posts: List<Post>,
+    postsList: List<Post>,
     dataViewModel: DataViewModel,
     sharedPreferencesViewModel: SharedPreferencesViewModel,
-    roomViewModel: RoomViewModel
+    roomViewModel: RoomViewModel,
+    context: Context
 ) {
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (screen == "createPost") {
-                        navController.navigate("createPost")
-                    } else if (screen == "createPostPlayer") {
-                        navController.navigate("createPostPlayer")
+    val post = remember { mutableStateListOf<Post>() }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(postsList) {
+        post.clear()
+        post.addAll(postsList)
+    }
+
+    fun fetchPosts() {
+        isLoading = true
+        isRefreshing = true
+        scope.launch {
+            if (isInternetAvailable(context)) {
+                if (screen == "createPost") {
+                    dataViewModel.fetchAllPostMatches(sharedPreferencesViewModel.getIdUser())
+                }else {
+                    dataViewModel.fetchAllPostPlayer(sharedPreferencesViewModel.getIdUser())
+                }
+            } else {
+                if (screen == "createPost") {
+                    roomViewModel.getAllPostsMatches(sharedPreferencesViewModel.getIdUser()) {
+
                     }
-                },
-                containerColor = Color.Transparent,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Agregar publicación",
-                    tint = Color.White
-                )
+                } else{
+                    roomViewModel.getAllPostsPlayer(sharedPreferencesViewModel.getIdUser()) {
+                    }
+                }
+
             }
+            isLoading = false
+            isRefreshing = false
         }
-    ) { paddingValues ->
-        LazyColumn(
-            contentPadding = paddingValues,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            items(posts) { post ->
-                PostCard(post, dataViewModel, sharedPreferencesViewModel, roomViewModel)
+    }
+
+    SwipeRefresh(
+        state = rememberSwipeRefreshState(isRefreshing),
+        onRefresh = { fetchPosts() }
+    ) {
+        Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        if (screen == "createPost") {
+                            navController.navigate("createPost")
+                        } else if (screen == "createPostPlayer") {
+                            navController.navigate("createPostPlayer")
+                        }
+                    },
+                    containerColor = Color.Transparent,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Agregar publicación",
+                        tint = Color.White
+                    )
+                }
+            }
+        ) { paddingValues ->
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = paddingValues,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    items(post.toList()) { post ->
+                        PostCard(post, dataViewModel, sharedPreferencesViewModel, roomViewModel)
+                    }
+                }
             }
         }
     }
 }
+
+
 
 @Composable
 fun PostCard(
