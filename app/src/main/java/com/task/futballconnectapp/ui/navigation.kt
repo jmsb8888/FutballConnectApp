@@ -72,7 +72,9 @@ fun MyApp(
                             postMatchesState.postMatches,
                             dataViewModel,
                             sharedPreferencesViewModel,
-                            roomViewModel
+                            roomViewModel,
+                            context
+
                         )
                     }
                     composable("results") {
@@ -82,7 +84,8 @@ fun MyApp(
                             postPlayersState.postPlayers,
                             dataViewModel,
                             sharedPreferencesViewModel,
-                            roomViewModel
+                            roomViewModel,
+                            context
                         )
                     }
                     composable("createPost") {
