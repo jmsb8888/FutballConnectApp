@@ -96,5 +96,19 @@ dependencies {
     implementation(libs.mssql.jdbc)
     implementation(libs.mssql.jdbc.v1220jre8)
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
+    testImplementation ("org.mockito:mockito-core:4.8.0")
+
+    // Para usar Mockito con Kotlin
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.0.0")
+
+    // Para pruebas en Android (si estás haciendo pruebas instrumentadas)
+    androidTestImplementation ("org.mockito:mockito-android:4.8.0")
+    androidTestImplementation ("androidx.compose.ui:ui-test-junit4:1.5.0") // o la versión que estés usando
+    androidTestImplementation ("androidx.compose.ui:ui-test-manifest:1.5.0")
+
+    // Para MockK y otras dependencias de pruebas
+    testImplementation ("io.mockk:mockk:1.13.4")
+    testImplementation ("junit:junit:4.13.2")
+    testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.0")
 
 }
